@@ -1,5 +1,6 @@
 -- =============================================================================
--- SUFIOUN DATABASE SYSTEM - MASTER SCRIPT
+-- SUFIOUN DATABASE SYSTEM - MASTER SCRIPT (Oracle APEX Optimized)
+-- Electronics Sales and Service Management System
 -- Contains: 
 --   1. Dynamic Teardown (Drops existing objects)
 --   2. Schema Creation (Tables, Sequences, Triggers, Procedures)
@@ -62,6 +63,7 @@ END;
 
 --------------------------------------------------------------------------------
 -- 01. sufioun_COMPANY
+-- Stores company/branch information with logo support
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_company (
     company_id          VARCHAR2(50) PRIMARY KEY,
@@ -76,17 +78,22 @@ CREATE TABLE sufioun_company (
     cp_phone_no         VARCHAR2(50),
     tag_line            VARCHAR2(300),
     mission_vision      VARCHAR2(1000),
-    -- Image columns for Oracle APEX
-    image_name          VARCHAR2(500),
-    image_mime_type     VARCHAR2(100),
-    image_blob          BLOB,
-    --
     status              NUMBER,
     cre_by              VARCHAR2(100),
     cre_dt              DATE,
     upd_by              VARCHAR2(100),
     upd_dt              DATE
-);
+)
+LOB (image_blob) STORE AS (
+    TABLESPACE USERS
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+)
+COMMENT ON TABLE sufioun_company IS 'Company/Branch Information Table';
+/
 
 CREATE SEQUENCE sufioun_company_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -112,21 +119,25 @@ END;
 
 --------------------------------------------------------------------------------
 -- 02. sufioun_JOBS
+-- Job/Position definitions with grade system
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_jobs (
     job_id       VARCHAR2(50) PRIMARY KEY,
     job_code     VARCHAR2(50),
     job_title    VARCHAR2(150),
     job_grade    VARCHAR2(1),
-    min_salary   NUMBER,
-    max_salary   NUMBER,
-    status       NUMBER,
+    min_salary   NUMBER(15,2),
+    max_salary   NUMBER(15,2),
+    job_desc     VARCHAR2(1000),
+    status       NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by       VARCHAR2(100),
     cre_dt       DATE,
     upd_by       VARCHAR2(100),
     upd_dt       DATE,
     CONSTRAINT sufioun_chk_job_grade CHECK (job_grade IN ('A','B','C') OR job_grade IS NULL)
-);
+)
+COMMENT ON TABLE sufioun_jobs IS 'Job/Position Definitions';
+/
 
 CREATE SEQUENCE sufioun_jobs_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -154,6 +165,7 @@ END;
 
 --------------------------------------------------------------------------------
 -- 03. sufioun_CUSTOMERS
+-- Customer information with photo support
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_customers (
     customer_id   VARCHAR2(50) PRIMARY KEY,
@@ -163,19 +175,24 @@ CREATE TABLE sufioun_customers (
     email         VARCHAR2(150),
     address       VARCHAR2(300),
     city          VARCHAR2(100),
-    rewards       NUMBER DEFAULT 0,
+    rewards       NUMBER(10) DEFAULT 0,
     remarks       VARCHAR2(1000),
-    -- Image columns for Oracle APEX
-    image_name    VARCHAR2(500),
-    image_mime_type VARCHAR2(100),
-    image_blob    BLOB,
-    --
     status        NUMBER,
     cre_by        VARCHAR2(100),
     cre_dt        DATE,
     upd_by        VARCHAR2(100),
     upd_dt        DATE
-);
+)
+LOB (image_blob) STORE AS (
+    TABLESPACE USERS
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+)
+COMMENT ON TABLE sufioun_customers IS 'Customer Master Data';
+/
 
 CREATE SEQUENCE sufioun_customers_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -204,22 +221,28 @@ END;
 
 --------------------------------------------------------------------------------
 -- 04. sufioun_PARTS_CATEGORY
+-- Parts category classification with icons
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_parts_category (
     parts_cat_id    VARCHAR2(50) PRIMARY KEY,
     parts_cat_code  VARCHAR2(50),
     parts_cat_name  VARCHAR2(150) ,
-    -- Image columns for Oracle APEX
-    image_name      VARCHAR2(500),
-    image_mime_type VARCHAR2(100),
-    image_blob      BLOB,
-    --
     status          NUMBER,
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
     upd_by          VARCHAR2(100),
     upd_dt          DATE
-);
+)
+LOB (image_blob) STORE AS (
+    TABLESPACE USERS
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+)
+COMMENT ON TABLE sufioun_parts_category IS 'Parts Category Classification';
+/
 
 CREATE SEQUENCE sufioun_parts_cat_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -247,21 +270,27 @@ END;
 
 --------------------------------------------------------------------------------
 -- 05. sufioun_PRODUCT_CATEGORIES
+-- Product category classification with icons
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_product_categories (
     product_cat_id    VARCHAR2(50) PRIMARY KEY,
     product_cat_name  VARCHAR2(150) ,
-    -- Image columns for Oracle APEX
-    image_name        VARCHAR2(500),
-    image_mime_type   VARCHAR2(100),
-    image_blob        BLOB,
-    --
     status            NUMBER,
     cre_by            VARCHAR2(100),
     cre_dt            DATE,
     upd_by            VARCHAR2(100),
     upd_dt            DATE
-);
+)
+LOB (image_blob) STORE AS (
+    TABLESPACE USERS
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+)
+COMMENT ON TABLE sufioun_product_categories IS 'Product Category Classification';
+/
 
 CREATE SEQUENCE sufioun_prod_cat_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -287,6 +316,7 @@ END;
 
 --------------------------------------------------------------------------------
 -- 06. sufioun_BRAND
+-- Brand/Manufacturer information with logos
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_brand (
     brand_id      VARCHAR2(50) PRIMARY KEY,
@@ -294,17 +324,22 @@ CREATE TABLE sufioun_brand (
     model_name    VARCHAR2(150),
     brand_size    VARCHAR2(30),
     color         VARCHAR2(50),
-    -- Image columns for Oracle APEX
-    image_name    VARCHAR2(500),
-    image_mime_type VARCHAR2(100),
-    image_blob    BLOB,
-    --
     status        NUMBER,
     cre_by        VARCHAR2(100),
     cre_dt        DATE,
     upd_by        VARCHAR2(100),
     upd_dt        DATE
-);
+)
+LOB (image_blob) STORE AS (
+    TABLESPACE USERS
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+)
+COMMENT ON TABLE sufioun_brand IS 'Brand/Manufacturer Master Data';
+/
 
 CREATE SEQUENCE sufioun_brand_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -330,6 +365,7 @@ END;
 
 --------------------------------------------------------------------------------
 -- 07. sufioun_SUPPLIERS
+-- Supplier/Vendor information with logos
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_suppliers (
     supplier_id    VARCHAR2(50) PRIMARY KEY,
@@ -337,6 +373,7 @@ CREATE TABLE sufioun_suppliers (
     phone_no       VARCHAR2(30),
     email          VARCHAR2(150),
     address        VARCHAR2(300),
+    city           VARCHAR2(100),
     contact_person VARCHAR2(100),
     cp_designation VARCHAR2(100),
     cp_phone_no    VARCHAR2(30),
@@ -344,17 +381,22 @@ CREATE TABLE sufioun_suppliers (
     purchase_total NUMBER DEFAULT 0,
     pay_total      NUMBER DEFAULT 0,
     due            NUMBER,
-    -- Image columns for Oracle APEX
-    image_name     VARCHAR2(500),
-    image_mime_type VARCHAR2(100),
-    image_blob     BLOB,
-    --
     status         NUMBER,
     cre_by         VARCHAR2(100),
     cre_dt         DATE,
     upd_by         VARCHAR2(100),
     upd_dt         DATE
-);
+)
+LOB (image_blob) STORE AS (
+    TABLESPACE USERS
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+)
+COMMENT ON TABLE sufioun_suppliers IS 'Supplier/Vendor Master Data';
+/
 
 CREATE SEQUENCE sufioun_suppliers_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -380,18 +422,22 @@ END;
 
 --------------------------------------------------------------------------------
 -- 08. sufioun_SERVICE_LIST
+-- Service types with costs
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_service_list (
     servicelist_id VARCHAR2(50) PRIMARY KEY,
     service_name   VARCHAR2(150) NOT NULL,
     service_desc   VARCHAR2(1000),
-    service_cost   NUMBER DEFAULT 0,
-    status         NUMBER,
+    service_cost   NUMBER(15,2) DEFAULT 0,
+    estimated_time NUMBER(5) DEFAULT 0,
+    status         NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by         VARCHAR2(100),
     cre_dt         DATE,
     upd_by         VARCHAR2(100),
     upd_dt         DATE
-);
+)
+COMMENT ON TABLE sufioun_service_list IS 'Service Types and Pricing';
+/
 
 CREATE SEQUENCE sufioun_service_list_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -416,6 +462,7 @@ END;
 
 --------------------------------------------------------------------------------
 -- 09. sufioun_EXPENSE_LIST
+-- Expense types with default amounts
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_expense_list (
     expense_type_id VARCHAR2(50) PRIMARY KEY,
@@ -423,12 +470,15 @@ CREATE TABLE sufioun_expense_list (
     type_name       VARCHAR2(200),
     description     VARCHAR2(1000),
     default_amount  NUMBER(15,2),
-    status          NUMBER,
+    expense_category VARCHAR2(100),
+    status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
     upd_by          VARCHAR2(100),
     upd_dt          DATE
-);
+)
+COMMENT ON TABLE sufioun_expense_list IS 'Expense Type Definitions';
+/
 
 CREATE SEQUENCE sufioun_exp_list_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -455,17 +505,35 @@ END;
 
 --------------------------------------------------------------------------------
 -- 10. sufioun_SUB_CATEGORIES
+-- Sub-category linked to product categories
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_sub_categories (
     sub_cat_id       VARCHAR2(50) PRIMARY KEY,
     sub_cat_name     VARCHAR2(150),
+    sub_cat_desc     VARCHAR2(500),
     product_cat_id   VARCHAR2(50) REFERENCES sufioun_product_categories(product_cat_id),
-    status           NUMBER,
+    sort_order       NUMBER(5) DEFAULT 0,
+    -- APEX Image Columns
+    image_name       VARCHAR2(500),
+    image_mime_type  VARCHAR2(100),
+    image_blob       BLOB,
+    --
+    status           NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by           VARCHAR2(100),
     cre_dt           DATE,
     upd_by           VARCHAR2(100),
     upd_dt           DATE
-);
+)
+LOB (image_blob) STORE AS (
+    TABLESPACE USERS
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+)
+COMMENT ON TABLE sufioun_sub_categories IS 'Product Sub-Category Classification';
+/
 
 CREATE SEQUENCE sufioun_sub_cat_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -490,11 +558,13 @@ END;
 
 --------------------------------------------------------------------------------
 -- 11. sufioun_PRODUCTS
+-- Product master with images
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_products (
     product_id      VARCHAR2(50) PRIMARY KEY,
     product_code    VARCHAR2(30),
     product_name    VARCHAR2(150) NOT NULL,
+    product_desc    VARCHAR2(1000),
     supplier_id     VARCHAR2(50) REFERENCES sufioun_suppliers(supplier_id),
     category_id     VARCHAR2(50) REFERENCES sufioun_product_categories(product_cat_id),
     sub_cat_id      VARCHAR2(50) REFERENCES sufioun_sub_categories(sub_cat_id),
@@ -503,17 +573,22 @@ CREATE TABLE sufioun_products (
     mrp             NUMBER,
     purchase_price  NUMBER,
     warranty        NUMBER, 
-    -- Image columns for Oracle APEX
-    image_name      VARCHAR2(500),
-    image_mime_type VARCHAR2(100),
-    image_blob      BLOB,
-    --
     status          NUMBER,
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
     upd_by          VARCHAR2(100),
     upd_dt          DATE
-);
+)
+LOB (image_blob) STORE AS (
+    TABLESPACE USERS
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+)
+COMMENT ON TABLE sufioun_products IS 'Product Master Data';
+/
 
 CREATE SEQUENCE sufioun_products_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -539,25 +614,32 @@ END;
 
 --------------------------------------------------------------------------------
 -- 12. sufioun_PARTS
+-- Spare parts with images
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_parts (
     parts_id       VARCHAR2(50) PRIMARY KEY,
     parts_code     VARCHAR2(50),
     parts_name     VARCHAR2(150),
-    purchase_price NUMBER,
-    mrp            NUMBER,
+    parts_desc     VARCHAR2(1000),
+    purchase_price NUMBER(15,2),
+    mrp            NUMBER(15,2),
     parts_cat_id   VARCHAR2(50) REFERENCES sufioun_parts_category(parts_cat_id),
-    -- Image columns for Oracle APEX
-    image_name     VARCHAR2(500),
-    image_mime_type VARCHAR2(100),
-    image_blob     BLOB,
-    --
     status         NUMBER,
     cre_by         VARCHAR2(100),
     cre_dt         DATE,
     upd_by         VARCHAR2(100),
     upd_dt         DATE
-);
+)
+LOB (image_blob) STORE AS (
+    TABLESPACE USERS
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+)
+COMMENT ON TABLE sufioun_parts IS 'Spare Parts Master Data';
+/
 
 CREATE SEQUENCE sufioun_parts_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -584,60 +666,26 @@ END;
 
 --------------------------------------------------------------------------------
 -- 13. sufioun_DEPARTMENTS
+-- Department/Unit organization
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_departments (
     department_id   VARCHAR2(50) PRIMARY KEY,
     department_name VARCHAR2(100),
+    department_desc VARCHAR2(500),
     manager_id      VARCHAR2(50), 
-    company_id      VARCHAR2(50) NULL,
-    status          NUMBER,
+    company_id      VARCHAR2(50),
+    location        VARCHAR2(200),
+    status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
     upd_by          VARCHAR2(100),
     upd_dt          DATE,
     CONSTRAINT sufioun_fk_dept_company FOREIGN KEY (company_id) REFERENCES sufioun_company(company_id)
-);
+)
+COMMENT ON TABLE sufioun_departments IS 'Department/Unit Organization';
+/
 
 CREATE SEQUENCE sufioun_departments_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
-
---------------------------------------------------------------------------------
--- 14. sufioun_EMPLOYEES
---------------------------------------------------------------------------------
-CREATE TABLE sufioun_employees (
-    employee_id   VARCHAR2(50) PRIMARY KEY,
-    first_name    VARCHAR2(50),
-    last_name     VARCHAR2(50) NOT NULL,
-    email         VARCHAR2(150),
-    phone_no      VARCHAR2(30),
-    address       VARCHAR2(4000),
-    hire_date     DATE,
-    salary        NUMBER,
-    job_id        VARCHAR2(50) NULL,
-    manager_id    VARCHAR2(50), 
-    department_id VARCHAR2(50) NULL,
-    image_name          VARCHAR2(500),
-    mime_type     VARCHAR2(100),
-    photo         BLOB,
-    status        NUMBER,
-    cre_by        VARCHAR2(100),
-    cre_dt        DATE,
-    upd_by        VARCHAR2(100),
-    upd_dt        DATE,
-    CONSTRAINT sufioun_fk_emp_job  FOREIGN KEY (job_id) REFERENCES sufioun_jobs(job_id),
-    CONSTRAINT sufioun_fk_emp_dept FOREIGN KEY (department_id) REFERENCES sufioun_departments(department_id)
-);
-
-CREATE SEQUENCE sufioun_employees_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
-
-ALTER TABLE sufioun_employees ADD CONSTRAINT sufioun_fk_emp_mgr
-FOREIGN KEY (manager_id)
-REFERENCES sufioun_employees(employee_id)
-DEFERRABLE INITIALLY DEFERRED;
-
-ALTER TABLE sufioun_departments ADD CONSTRAINT sufioun_fk_dept_mgr 
-FOREIGN KEY (manager_id) 
-REFERENCES sufioun_employees(employee_id) 
-DEFERRABLE INITIALLY DEFERRED;
 
 CREATE OR REPLACE TRIGGER sufioun_trg_departments_bi
 BEFORE INSERT OR UPDATE ON sufioun_departments FOR EACH ROW
@@ -658,6 +706,69 @@ BEGIN
     END IF;
 END;
 /
+
+--------------------------------------------------------------------------------
+-- 14. sufioun_EMPLOYEES
+-- Employee master with photo support
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_employees (
+    employee_id   VARCHAR2(50) PRIMARY KEY,
+    first_name    VARCHAR2(50),
+    last_name     VARCHAR2(50) NOT NULL,
+    email         VARCHAR2(150),
+    phone_no      VARCHAR2(30),
+    address       VARCHAR2(4000),
+    date_of_birth DATE,
+    hire_date     DATE,
+    salary        NUMBER(15,2),
+    job_id        VARCHAR2(50),
+    manager_id    VARCHAR2(50), 
+    department_id VARCHAR2(50) NULL,
+    photo         BLOB,
+    emp_code      VARCHAR2(50),
+    -- APEX Image Columns for Photo
+    image_name    VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob    BLOB,
+    --
+    status        NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+    cre_by        VARCHAR2(100),
+    cre_dt        DATE,
+    upd_by        VARCHAR2(100),
+    upd_dt        DATE,
+    CONSTRAINT sufioun_fk_emp_job  FOREIGN KEY (job_id) REFERENCES sufioun_jobs(job_id),
+    CONSTRAINT sufioun_fk_emp_dept FOREIGN KEY (department_id) REFERENCES sufioun_departments(department_id)
+)
+LOB (photo) STORE AS (
+    TABLESPACE USERS
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+)
+LOB (image_blob) STORE AS (
+    TABLESPACE USERS
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+)
+COMMENT ON TABLE sufioun_employees IS 'Employee Master Data';
+/
+
+CREATE SEQUENCE sufioun_employees_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+ALTER TABLE sufioun_employees ADD CONSTRAINT sufioun_fk_emp_mgr
+FOREIGN KEY (manager_id)
+REFERENCES sufioun_employees(employee_id)
+DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE sufioun_departments ADD CONSTRAINT sufioun_fk_dept_mgr 
+FOREIGN KEY (manager_id) 
+REFERENCES sufioun_employees(employee_id) 
+DEFERRABLE INITIALLY DEFERRED;
 
 CREATE OR REPLACE TRIGGER sufioun_trg_employees_bi
 BEFORE INSERT OR UPDATE ON sufioun_employees FOR EACH ROW
@@ -681,26 +792,33 @@ END;
 
 --------------------------------------------------------------------------------
 -- 15. sufioun_SALES_MASTER
+-- Sales invoice/transaction header
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_sales_master (
     invoice_id     VARCHAR2(50) PRIMARY KEY,
     invoice_date   DATE DEFAULT SYSDATE,
-    discount       NUMBER DEFAULT 0,
-    vat            NUMBER DEFAULT 0,
+    invoice_no     VARCHAR2(50) UNIQUE,
+    discount       NUMBER(15,2) DEFAULT 0,
+    vat            NUMBER(5,2) DEFAULT 0,
     adjust_ref     VARCHAR2(50),
     total_amount   NUMBER(20,4) DEFAULT 0,
     adjust_amount  NUMBER(20,4) DEFAULT 0,
     grand_total    NUMBER(20,4) DEFAULT 0,
-    customer_id    VARCHAR2(50) NULL,
-    sales_by       VARCHAR2(50) NULL,
-    status         NUMBER,
+    customer_id    VARCHAR2(50),
+    sales_by       VARCHAR2(50),
+    payment_status VARCHAR2(20) DEFAULT 'PENDING',
+    notes          VARCHAR2(1000),
+    status         NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1, 2)),
     cre_by         VARCHAR2(100),
     cre_dt         DATE,
     upd_by         VARCHAR2(100),
     upd_dt         DATE,
     CONSTRAINT sufioun_fk_sales_cust FOREIGN KEY (customer_id) REFERENCES sufioun_customers(customer_id),
-    CONSTRAINT sufioun_fk_sales_emp  FOREIGN KEY (sales_by) REFERENCES sufioun_employees(employee_id)
-);
+    CONSTRAINT sufioun_fk_sales_emp  FOREIGN KEY (sales_by) REFERENCES sufioun_employees(employee_id),
+    CONSTRAINT sufioun_chk_pay_status CHECK (payment_status IN ('PENDING', 'PAID', 'PARTIAL', 'CANCELLED'))
+)
+COMMENT ON TABLE sufioun_sales_master IS 'Sales Invoice Header';
+/
 
 CREATE SEQUENCE sufioun_sales_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -724,21 +842,27 @@ END;
 
 --------------------------------------------------------------------------------
 -- 16. sufioun_SALES_RETURN_MASTER
+-- Sales return header
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_sales_return_master (
     sales_return_id VARCHAR2(50) PRIMARY KEY,
-    invoice_id      VARCHAR2(50) NULL, 
-    customer_id     VARCHAR2(50) NULL,
+    invoice_id      VARCHAR2(50), 
+    customer_id     VARCHAR2(50),
     return_date     DATE DEFAULT SYSDATE,
+    return_no       VARCHAR2(50) UNIQUE,
     total_amount    NUMBER(20,4) DEFAULT 0,
-    status          NUMBER,
+    reason          VARCHAR2(1000),
+    approved_by     VARCHAR2(50),
+    status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
     upd_by          VARCHAR2(100),
     upd_dt          DATE,
     CONSTRAINT sufioun_fk_srm_inv   FOREIGN KEY (invoice_id) REFERENCES sufioun_sales_master(invoice_id),
     CONSTRAINT sufioun_fk_srm_cust  FOREIGN KEY (customer_id) REFERENCES sufioun_customers(customer_id)
-);
+)
+COMMENT ON TABLE sufioun_sales_return_master IS 'Sales Return Header';
+/
 
 CREATE SEQUENCE sufioun_sales_ret_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -764,28 +888,21 @@ FOREIGN KEY (adjust_ref) REFERENCES sufioun_sales_return_master(sales_return_id)
 
 --------------------------------------------------------------------------------
 -- 17. sufioun_SERVICE_MASTER
+-- Service request header with before/after images
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_service_master (
     service_id          VARCHAR2(50) PRIMARY KEY,
+    service_no          VARCHAR2(50) UNIQUE,
     service_date        DATE DEFAULT SYSDATE,
-    customer_id         VARCHAR2(50) NULL,
-    invoice_id          VARCHAR2(50) NULL,
+    customer_id         VARCHAR2(50),
+    invoice_id          VARCHAR2(50),
     invoice_date        DATE, 
-    warranty_applicable CHAR(1),
-    service_by          VARCHAR2(50) NULL,
-    service_charge_total NUMBER DEFAULT 0,
+    warranty_applicable CHAR(1) CHECK (warranty_applicable IN ('Y', 'N')),
+    service_by          VARCHAR2(50),
+    service_charge_total NUMBER(15,2) DEFAULT 0,
     total_price         NUMBER(20,4) DEFAULT 0,
-    vat                 NUMBER(20,4) DEFAULT 0,
+    vat                 NUMBER(5,2) DEFAULT 0,
     grand_total         NUMBER(20,4) DEFAULT 0,
-    -- Image columns for Oracle APEX (before service images)
-    image_before_name   VARCHAR2(500),
-    image_before_mime   VARCHAR2(100),
-    image_before_blob   BLOB,
-    -- Image columns for Oracle APEX (after service images)
-    image_after_name    VARCHAR2(500),
-    image_after_mime    VARCHAR2(100),
-    image_after_blob    BLOB,
-    --
     status              NUMBER,
     cre_by              VARCHAR2(100),
     cre_dt              DATE,
@@ -793,31 +910,57 @@ CREATE TABLE sufioun_service_master (
     upd_dt              DATE,
     CONSTRAINT sufioun_fk_sm_cust FOREIGN KEY (customer_id) REFERENCES sufioun_customers(customer_id),
     CONSTRAINT sufioun_fk_sm_emp  FOREIGN KEY (service_by) REFERENCES sufioun_employees(employee_id),
-    CONSTRAINT sufioun_fk_sm_inv  FOREIGN KEY (invoice_id) REFERENCES sufioun_sales_master(invoice_id)
-);
+    CONSTRAINT sufioun_fk_sm_inv  FOREIGN KEY (invoice_id) REFERENCES sufioun_sales_master(invoice_id),
+    CONSTRAINT sufioun_chk_svc_status CHECK (service_status IN ('RECEIVED', 'DIAGNOSIS', 'IN_PROGRESS', 'COMPLETED', 'DELIVERED', 'CANCELLED'))
+)
+LOB (image_before_blob) STORE AS (
+    TABLESPACE USERS
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+)
+LOB (image_after_blob) STORE AS (
+    TABLESPACE USERS
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+)
+COMMENT ON TABLE sufioun_service_master IS 'Service Request Header';
+/
 
 CREATE SEQUENCE sufioun_service_master_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
 --------------------------------------------------------------------------------
 -- 18. sufioun_PRODUCT_ORDER_MASTER 
+-- Purchase order header
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_product_order_master (
     order_id      VARCHAR2(50) PRIMARY KEY,
+    order_no      VARCHAR2(50) UNIQUE,
     order_date    DATE DEFAULT SYSDATE,
-    supplier_id   VARCHAR2(50) NULL,
+    supplier_id   VARCHAR2(50),
     expected_delivery_date DATE,
-    order_by      VARCHAR2(50) NULL, 
+    order_by      VARCHAR2(50), 
     total_amount  NUMBER(20,4) DEFAULT 0,
-    vat           NUMBER(20,4) DEFAULT 0,
+    vat           NUMBER(5,2) DEFAULT 0,
     grand_total   NUMBER(20,4) DEFAULT 0,
-    status        NUMBER,
+    order_status  VARCHAR2(30) DEFAULT 'PENDING',
+    notes         VARCHAR2(1000),
+    status        NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by        VARCHAR2(100),
     cre_dt        DATE,
     upd_by        VARCHAR2(100),
     upd_dt        DATE,
     CONSTRAINT sufioun_fk_pom_sup  FOREIGN KEY (supplier_id) REFERENCES sufioun_suppliers(supplier_id),
-    CONSTRAINT sufioun_fk_pom_emp  FOREIGN KEY (order_by) REFERENCES sufioun_employees(employee_id)
-);
+    CONSTRAINT sufioun_fk_pom_emp  FOREIGN KEY (order_by) REFERENCES sufioun_employees(employee_id),
+    CONSTRAINT sufioun_chk_order_status CHECK (order_status IN ('PENDING', 'APPROVED', 'PROCESSING', 'RECEIVED', 'CANCELLED'))
+)
+COMMENT ON TABLE sufioun_product_order_master IS 'Purchase Order Header';
+/
 
 CREATE SEQUENCE sufioun_order_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -840,18 +983,22 @@ END;
 
 --------------------------------------------------------------------------------
 -- 19. sufioun_PRODUCT_RECEIVE_MASTER 
+-- Goods received note header
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_product_receive_master (
     receive_id      VARCHAR2(50) PRIMARY KEY,
+    receive_no      VARCHAR2(50) UNIQUE,
     receive_date    DATE DEFAULT SYSDATE,
-    order_id        VARCHAR2(50) NULL,
+    order_id        VARCHAR2(50),
     sup_invoice_id  VARCHAR2(50) UNIQUE,
-    supplier_id     VARCHAR2(50) NULL, 
-    received_by     VARCHAR2(50) NULL, 
+    supplier_id     VARCHAR2(50), 
+    received_by     VARCHAR2(50), 
     total_amount    NUMBER(20,4) DEFAULT 0,
-    vat             NUMBER(20,4) DEFAULT 0, 
+    vat             NUMBER(5,2) DEFAULT 0, 
     grand_total     NUMBER(20,4) DEFAULT 0,   
-    status          NUMBER,
+    receive_status  VARCHAR2(30) DEFAULT 'RECEIVED',
+    notes           VARCHAR2(1000),
+    status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
     upd_by          VARCHAR2(100),
@@ -859,7 +1006,9 @@ CREATE TABLE sufioun_product_receive_master (
     CONSTRAINT sufioun_fk_pr_emp    FOREIGN KEY (received_by) REFERENCES sufioun_employees(employee_id),
     CONSTRAINT sufioun_fk_pr_sup    FOREIGN KEY (supplier_id) REFERENCES sufioun_suppliers(supplier_id),
     CONSTRAINT sufioun_fk_pr_order  FOREIGN KEY (order_id) REFERENCES sufioun_product_order_master(order_id)
-);
+)
+COMMENT ON TABLE sufioun_product_receive_master IS 'Goods Received Note Header';
+/
 
 CREATE SEQUENCE sufioun_receive_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -906,18 +1055,22 @@ END;
 
 --------------------------------------------------------------------------------
 -- 20. sufioun_PRODUCT_RETURN_MASTER 
+-- Supplier return header
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_product_return_master (
     return_id       VARCHAR2(50) PRIMARY KEY,
-    supplier_id     VARCHAR2(50) NULL,
-    receive_id      VARCHAR2(50) NULL,
-    order_id        VARCHAR2(50) NULL,
+    return_no       VARCHAR2(50) UNIQUE,
+    supplier_id     VARCHAR2(50),
+    receive_id      VARCHAR2(50),
+    order_id        VARCHAR2(50),
     return_date     DATE DEFAULT SYSDATE,
-    return_by       VARCHAR2(50) NULL, 
+    return_by       VARCHAR2(50), 
     total_amount    NUMBER(20,4) DEFAULT 0,
-    adjusted_vat    NUMBER(20,4) DEFAULT 0, 
+    adjusted_vat    NUMBER(5,2) DEFAULT 0, 
     grand_total     NUMBER(20,4) DEFAULT 0,
-    status          NUMBER,
+    return_reason   VARCHAR2(1000),
+    approved_by     VARCHAR2(50),
+    status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
     upd_by          VARCHAR2(100),
@@ -926,7 +1079,9 @@ CREATE TABLE sufioun_product_return_master (
     CONSTRAINT sufioun_fk_pre_rcv FOREIGN KEY (receive_id) REFERENCES sufioun_product_receive_master(receive_id),
     CONSTRAINT sufioun_fk_pre_order FOREIGN KEY (order_id) REFERENCES sufioun_product_order_master(order_id),
     CONSTRAINT sufioun_fk_pre_emp FOREIGN KEY (return_by) REFERENCES sufioun_employees(employee_id)
-);
+)
+COMMENT ON TABLE sufioun_product_return_master IS 'Supplier Return Header';
+/
 
 CREATE SEQUENCE sufioun_prod_ret_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -949,21 +1104,26 @@ END;
 
 --------------------------------------------------------------------------------
 -- 21. sufioun_DAMAGE
+-- Damage/loss records
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_damage (
     damage_id VARCHAR2(50) PRIMARY KEY,
+    damage_no VARCHAR2(50) UNIQUE,
     damage_date DATE DEFAULT SYSDATE,
     reference_no VARCHAR2(100),
-    total_loss NUMBER DEFAULT 0,
-    status NUMBER DEFAULT 1, 
-    approved_by VARCHAR2(100),
+    total_loss NUMBER(15,2) DEFAULT 0,
+    damage_reason VARCHAR2(1000),
+    status NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)), 
+    approved_by VARCHAR2(50),
     approval_date DATE,
     cre_by VARCHAR2(100),
     cre_dt DATE,
     upd_by VARCHAR2(100),
     upd_dt DATE, 
     CONSTRAINT sufioun_fk_dmg_emp FOREIGN KEY (approved_by) REFERENCES sufioun_employees(employee_id)
-);
+)
+COMMENT ON TABLE sufioun_damage IS 'Damage/Loss Records';
+/
 
 CREATE SEQUENCE sufioun_damage_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -984,21 +1144,26 @@ END;
 
 --------------------------------------------------------------------------------
 -- 22. sufioun_STOCK
+-- Inventory stock tracking
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_stock (
     stock_id        VARCHAR2(50) PRIMARY KEY,
-    product_id      VARCHAR2(50) NULL,
-    supplier_id     VARCHAR2(50) NULL,
-    product_cat_id  VARCHAR2(50) NULL,
-    sub_cat_id      VARCHAR2(50) NULL,
-    quantity        NUMBER DEFAULT 0,
+    product_id      VARCHAR2(50),
+    supplier_id     VARCHAR2(50),
+    product_cat_id  VARCHAR2(50),
+    sub_cat_id      VARCHAR2(50),
+    quantity        NUMBER(10) DEFAULT 0,
     last_update     TIMESTAMP DEFAULT SYSTIMESTAMP,
+    location        VARCHAR2(100),
+    rack_no         VARCHAR2(50),
     CONSTRAINT sufioun_fk_s_p       FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id),
     CONSTRAINT sufioun_fk_s_sup     FOREIGN KEY (supplier_id) REFERENCES sufioun_suppliers(supplier_id),
     CONSTRAINT sufioun_fk_prod_cat   FOREIGN KEY (product_cat_id) REFERENCES sufioun_product_categories(product_cat_id),
     CONSTRAINT sufioun_chk_stock_qty CHECK (quantity >= 0),
     CONSTRAINT sufioun_uk_stock_prod UNIQUE (product_id)
-);
+)
+COMMENT ON TABLE sufioun_stock IS 'Inventory Stock Tracking';
+/
 
 CREATE SEQUENCE sufioun_stock_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -1016,24 +1181,27 @@ END;
 
 --------------------------------------------------------------------------------
 -- 23. sufioun_SERVICE_DETAILS
+-- Service line items
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_service_details (
     service_det_id     VARCHAR2(50) PRIMARY KEY,
-    service_id         VARCHAR2(50) NULL,
-    product_id         VARCHAR2(50) NULL,
-    servicelist_id     VARCHAR2(50) NULL,
-    parts_id           VARCHAR2(50) NULL,
-    service_charge     NUMBER DEFAULT 0,
-    parts_price        NUMBER DEFAULT 0,
-    quantity           NUMBER DEFAULT 1, 
-    line_total         NUMBER DEFAULT 0,
+    service_id         VARCHAR2(50),
+    product_id         VARCHAR2(50),
+    servicelist_id     VARCHAR2(50),
+    parts_id           VARCHAR2(50),
+    service_charge     NUMBER(15,2) DEFAULT 0,
+    parts_price        NUMBER(15,2) DEFAULT 0,
+    quantity           NUMBER(10) DEFAULT 1, 
+    line_total         NUMBER(20,4) DEFAULT 0,
     description        VARCHAR2(1000), 
-    warranty_status    VARCHAR2(50),
+    warranty_status    VARCHAR2(50) CHECK (warranty_status IN ('Y', 'N')),
     CONSTRAINT sufioun_fk_sd_master FOREIGN KEY (service_id) REFERENCES sufioun_service_master(service_id),
     CONSTRAINT sufioun_fk_sd_list   FOREIGN KEY (servicelist_id) REFERENCES sufioun_service_list(servicelist_id),
     CONSTRAINT sufioun_fk_sd_parts  FOREIGN KEY (parts_id) REFERENCES sufioun_parts(parts_id),
     CONSTRAINT sufioun_fk_sd_prod   FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
-);
+)
+COMMENT ON TABLE sufioun_service_details IS 'Service Line Items';
+/
 
 CREATE SEQUENCE sufioun_service_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -1066,19 +1234,23 @@ END;
 
 --------------------------------------------------------------------------------
 -- 24. sufioun_SALES_DETAIL
+-- Sales invoice line items
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_sales_detail (
     sales_det_id    VARCHAR2(50) PRIMARY KEY,
-    invoice_id      VARCHAR2(50) NULL,
-    product_id      VARCHAR2(50) NULL,
-    mrp             NUMBER,
-    purchase_price  NUMBER,
-    discount_amount NUMBER,
-    quantity        NUMBER,
+    invoice_id      VARCHAR2(50),
+    product_id      VARCHAR2(50),
+    mrp             NUMBER(15,2),
+    purchase_price  NUMBER(15,2),
+    discount_amount NUMBER(15,2) DEFAULT 0,
+    quantity        NUMBER(10),
+    line_total      NUMBER(20,4) GENERATED ALWAYS AS ((mrp - discount_amount) * quantity) VIRTUAL,
     description     VARCHAR2(1000), 
     CONSTRAINT sufioun_fk_sdt_inv  FOREIGN KEY (invoice_id) REFERENCES sufioun_sales_master(invoice_id) ON DELETE CASCADE,
     CONSTRAINT sufioun_fk_sdt_prod FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
-);
+)
+COMMENT ON TABLE sufioun_sales_detail IS 'Sales Invoice Line Items';
+/
 
 CREATE SEQUENCE sufioun_sales_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -1141,21 +1313,24 @@ END sufioun_trg_sales_detail_sync;
 
 --------------------------------------------------------------------------------
 -- 25. sufioun_SALES_RETURN_DETAILS
+-- Sales return line items
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_sales_return_details (
     sales_return_det_id VARCHAR2(50) PRIMARY KEY,
-    sales_return_id     VARCHAR2(50) NULL,
-    product_id          VARCHAR2(50) NULL,
-    mrp                 NUMBER,
-    purchase_price      NUMBER,
-    quantity            NUMBER,
-    discount_amount     NUMBER,
-    item_total          NUMBER,
-    qty_return          NUMBER,
+    sales_return_id     VARCHAR2(50),
+    product_id          VARCHAR2(50),
+    mrp                 NUMBER(15,2),
+    purchase_price      NUMBER(15,2),
+    quantity            NUMBER(10),
+    discount_amount     NUMBER(15,2) DEFAULT 0,
+    item_total          NUMBER(20,4),
+    qty_return          NUMBER(10),
     reason              VARCHAR2(4000),
     CONSTRAINT sufioun_fk_srd_mst FOREIGN KEY (sales_return_id) REFERENCES sufioun_sales_return_master(sales_return_id),
     CONSTRAINT sufioun_fk_srd_prd FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
-);
+)
+COMMENT ON TABLE sufioun_sales_return_details IS 'Sales Return Line Items';
+/
 
 CREATE SEQUENCE sufioun_sales_ret_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -1188,17 +1363,22 @@ END;
 
 --------------------------------------------------------------------------------
 -- 26. sufioun_PRODUCT_ORDER_DETAIL
+-- Purchase order line items
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_product_order_detail (
     order_detail_id VARCHAR2(50) PRIMARY KEY,
-    order_id        VARCHAR2(50) NULL,
-    product_id      VARCHAR2(50) NULL,
-    mrp             NUMBER, 
-    purchase_price  NUMBER, 
-    quantity        NUMBER,
+    order_id        VARCHAR2(50),
+    product_id      VARCHAR2(50),
+    mrp             NUMBER(15,2), 
+    purchase_price  NUMBER(15,2), 
+    quantity        NUMBER(10),
+    line_total      NUMBER(20,4) GENERATED ALWAYS AS (purchase_price * quantity) VIRTUAL,
+    delivered_qty   NUMBER(10) DEFAULT 0,
     CONSTRAINT sufioun_fk_pod_mst FOREIGN KEY (order_id) REFERENCES sufioun_product_order_master(order_id),
     CONSTRAINT sufioun_fk_pod_prd FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
-);
+)
+COMMENT ON TABLE sufioun_product_order_detail IS 'Purchase Order Line Items';
+/
 
 CREATE SEQUENCE sufioun_order_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -1265,17 +1445,22 @@ END sufioun_tri_total_price_compound;
 
 --------------------------------------------------------------------------------
 -- 27. sufioun_PRODUCT_RECEIVE_DETAILS
+-- Goods received line items
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_product_receive_details (
     receive_det_id   VARCHAR2(50) PRIMARY KEY,
-    receive_id       VARCHAR2(50) NULL,
-    product_id       VARCHAR2(50) NULL,
-    mrp              NUMBER,              
-    purchase_price   NUMBER,              
-    receive_quantity NUMBER,
+    receive_id       VARCHAR2(50),
+    product_id       VARCHAR2(50),
+    mrp              NUMBER(15,2),              
+    purchase_price   NUMBER(15,2),              
+    receive_quantity NUMBER(10),
+    line_total       NUMBER(20,4) GENERATED ALWAYS AS (purchase_price * receive_quantity) VIRTUAL,
+    order_detail_id  VARCHAR2(50),
     CONSTRAINT sufioun_fk_prd_mst FOREIGN KEY (receive_id) REFERENCES sufioun_product_receive_master(receive_id),
     CONSTRAINT sufioun_fk_prd_prd FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
-);
+)
+COMMENT ON TABLE sufioun_product_receive_details IS 'Goods Received Line Items';
+/
 
 CREATE SEQUENCE sufioun_recv_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -1337,18 +1522,22 @@ END;
 
 --------------------------------------------------------------------------------
 -- 28. sufioun_PRODUCT_RETURN_DETAILS
+-- Supplier return line items
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_product_return_details (
     return_detail_id VARCHAR2(50) PRIMARY KEY,
-    return_id        VARCHAR2(50) NULL,
-    product_id       VARCHAR2(50) NULL,
-    mrp              NUMBER,              
-    purchase_price   NUMBER,              
-    return_quantity  NUMBER, 
+    return_id        VARCHAR2(50),
+    product_id       VARCHAR2(50),
+    mrp              NUMBER(15,2),              
+    purchase_price   NUMBER(15,2),              
+    return_quantity  NUMBER(10), 
+    line_total       NUMBER(20,4) GENERATED ALWAYS AS (purchase_price * return_quantity) VIRTUAL,
     reason           VARCHAR2(1000),
     CONSTRAINT sufioun_fk_prdet_mst FOREIGN KEY (return_id) REFERENCES sufioun_product_return_master(return_id),
     CONSTRAINT sufioun_fk_prdet_prd FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
-);
+)
+COMMENT ON TABLE sufioun_product_return_details IS 'Supplier Return Line Items';
+/
 
 CREATE SEQUENCE sufioun_prod_ret_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -1400,22 +1589,27 @@ END;
 
 --------------------------------------------------------------------------------
 -- 29. sufioun_EXPENSE_MASTER
+-- Expense transaction header
+--------------------------------------------------------------------------------
+-- 29. sufioun_EXPENSE_MASTER
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_expense_master (
     expense_id      VARCHAR2(50) PRIMARY KEY,
+    expense_no      VARCHAR2(50) UNIQUE,
     expense_date    DATE,
-    department_id   VARCHAR2(100),
     expense_type_id VARCHAR2(50),
     expense_by      VARCHAR2(100),
-    expense_total   NUMBER,
-    status          NUMBER,
+    expense_total   NUMBER(15,2),
+    notes           VARCHAR2(1000),
+    status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
     upd_by          VARCHAR2(100),
     upd_dt          DATE,
-    CONSTRAINT sufioun_fk_ex_mst FOREIGN KEY (expense_type_id) REFERENCES sufioun_expense_list(expense_type_id),
-    CONSTRAINT sufioun_fk_ex_dept FOREIGN KEY (department_id) REFERENCES sufioun_departments(department_id)
-);
+    CONSTRAINT sufioun_fk_ex_mst FOREIGN KEY (expense_type_id) REFERENCES sufioun_expense_list(expense_type_id)
+)
+COMMENT ON TABLE sufioun_expense_master IS 'Expense Transaction Header';
+/
 
 CREATE SEQUENCE sufioun_exp_mst_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -1436,6 +1630,7 @@ END;
 
 --------------------------------------------------------------------------------
 -- 30. sufioun_EXPENSE_DETAILS
+-- Expense line items
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_expense_details (
     expense_det_id    VARCHAR2(50) PRIMARY KEY,
@@ -1443,7 +1638,9 @@ CREATE TABLE sufioun_expense_details (
     description       VARCHAR2(1000),
     amount            NUMBER(15,2) DEFAULT 0,
     CONSTRAINT sufioun_fk_ex_det_mst FOREIGN KEY (expense_id) REFERENCES sufioun_expense_master(expense_id)
-);
+)
+COMMENT ON TABLE sufioun_expense_details IS 'Expense Line Items';
+/
 
 CREATE SEQUENCE sufioun_exp_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -1468,18 +1665,22 @@ END;
 
 --------------------------------------------------------------------------------
 -- 31. sufioun_DAMAGE_DETAIL 
+-- Damage line items
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_damage_detail (
     damage_detail_id VARCHAR2(50) PRIMARY KEY,
     damage_id        VARCHAR2(50),
     product_id       VARCHAR2(50),
-    mrp              NUMBER,
-    purchase_price   NUMBER,
-    damage_quantity  NUMBER,
+    mrp              NUMBER(15,2),
+    purchase_price   NUMBER(15,2),
+    damage_quantity  NUMBER(10),
+    line_total       NUMBER(15,2) GENERATED ALWAYS AS (purchase_price * damage_quantity) VIRTUAL,
     reason           VARCHAR2(1000),
     CONSTRAINT sufioun_fk_dmg_mst FOREIGN KEY (damage_id) REFERENCES sufioun_damage(damage_id),
     CONSTRAINT sufioun_fk_dmg_prd FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
-);
+)
+COMMENT ON TABLE sufioun_damage_detail IS 'Damage/Loss Line Items';
+/
 
 CREATE SEQUENCE sufioun_damage_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -1506,6 +1707,7 @@ END;
 
 --------------------------------------------------------------------------------
 -- 32. sufioun_COM_USERS
+-- Application user accounts
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_com_users (
     user_id     VARCHAR2(50) PRIMARY KEY,
@@ -1513,13 +1715,18 @@ CREATE TABLE sufioun_com_users (
     password    VARCHAR2(200) NOT NULL,
     role        VARCHAR2(50) DEFAULT 'user' NOT NULL,
     employee_id VARCHAR2(50),
-    status      NUMBER,
+    last_login  DATE,
+    is_online   NUMBER(1) DEFAULT 0,
+    status      NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by      VARCHAR2(100),
     cre_dt      DATE,
     upd_by      VARCHAR2(100),
     upd_dt      DATE,
-    CONSTRAINT sufioun_fk_users_emp FOREIGN KEY (employee_id) REFERENCES sufioun_employees(employee_id) ON DELETE SET NULL
-);
+    CONSTRAINT sufioun_fk_users_emp FOREIGN KEY (employee_id) REFERENCES sufioun_employees(employee_id) ON DELETE SET NULL,
+    CONSTRAINT sufioun_chk_user_role CHECK (role IN ('admin', 'manager', 'user', 'technician', 'cashier'))
+)
+COMMENT ON TABLE sufioun_com_users IS 'Application User Accounts';
+/
 
 CREATE SEQUENCE sufioun_users_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -1541,15 +1748,22 @@ END;
 
 --------------------------------------------------------------------------------
 -- 33. sufioun_PAYMENTS
+-- Supplier payment records
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_payments (
     payment_id   VARCHAR2(50) PRIMARY KEY,
+    payment_no   VARCHAR2(50) UNIQUE,
     payment_date DATE NOT NULL,
     amount       NUMBER NOT NULL CHECK (amount > 0),
-    supplier_id  VARCHAR2(50) REFERENCES sufioun_suppliers(supplier_id),
+    supplier_id  VARCHAR2(50),
     payment_type VARCHAR2(50),
-    CONSTRAINT sufioun_chk_pay_type CHECK (UPPER(payment_type) IN ('CASH','ONLINE','BANK'))
-);
+    reference_no VARCHAR2(100),
+    notes        VARCHAR2(500),
+    CONSTRAINT sufioun_fk_pay_sup FOREIGN KEY (supplier_id) REFERENCES sufioun_suppliers(supplier_id),
+    CONSTRAINT sufioun_chk_pay_type CHECK (UPPER(payment_type) IN ('CASH','ONLINE','BANK','CHEQUE'))
+)
+COMMENT ON TABLE sufioun_payments IS 'Supplier Payment Records';
+/
 
 CREATE SEQUENCE sufioun_payments_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 
@@ -1879,6 +2093,67 @@ BEGIN
 END;
 /
 
+--------------------------------------------------------------------------------
+-- 35. PERFORMANCE INDEXES FOR ORACLE APEX
+--------------------------------------------------------------------------------
+CREATE INDEX idx_company_status ON sufioun_company(status);
+CREATE INDEX idx_products_name ON sufioun_products(product_name);
+CREATE INDEX idx_products_cat ON sufioun_products(category_id);
+CREATE INDEX idx_products_brand ON sufioun_products(brand_id);
+CREATE INDEX idx_products_barcode ON sufioun_products(barcode);
+CREATE INDEX idx_products_status ON sufioun_products(status);
+
+CREATE INDEX idx_parts_name ON sufioun_parts(parts_name);
+CREATE INDEX idx_parts_cat ON sufioun_parts(parts_cat_id);
+
+CREATE INDEX idx_customers_phone ON sufioun_customers(phone_no);
+CREATE INDEX idx_customers_name ON sufioun_customers(customer_name);
+CREATE INDEX idx_customers_city ON sufioun_customers(city);
+
+CREATE INDEX idx_employees_dept ON sufioun_employees(department_id);
+CREATE INDEX idx_employees_job ON sufioun_employees(job_id);
+CREATE INDEX idx_employees_mgr ON sufioun_employees(manager_id);
+
+CREATE INDEX idx_sales_inv ON sufioun_sales_master(invoice_date);
+CREATE INDEX idx_sales_cust ON sufioun_sales_master(customer_id);
+CREATE INDEX idx_sales_emp ON sufioun_sales_master(sales_by);
+CREATE INDEX idx_sales_status ON sufioun_sales_master(status);
+
+CREATE INDEX idx_sales_det_inv ON sufioun_sales_detail(invoice_id);
+CREATE INDEX idx_sales_det_prod ON sufioun_sales_detail(product_id);
+
+CREATE INDEX idx_svc_master_date ON sufioun_service_master(service_date);
+CREATE INDEX idx_svc_master_cust ON sufioun_service_master(customer_id);
+CREATE INDEX idx_svc_master_emp ON sufioun_service_master(service_by);
+CREATE INDEX idx_svc_master_status ON sufioun_service_master(service_status);
+
+CREATE INDEX idx_order_date ON sufioun_product_order_master(order_date);
+CREATE INDEX idx_order_sup ON sufioun_product_order_master(supplier_id);
+CREATE INDEX idx_order_status ON sufioun_product_order_master(order_status);
+
+CREATE INDEX idx_receive_date ON sufioun_product_receive_master(receive_date);
+CREATE INDEX idx_receive_sup ON sufioun_product_receive_master(supplier_id);
+CREATE INDEX idx_receive_order ON sufioun_product_receive_master(order_id);
+
+CREATE INDEX idx_stock_prod ON sufioun_stock(product_id);
+CREATE INDEX idx_stock_cat ON sufioun_stock(product_cat_id);
+
+CREATE INDEX idx_payments_sup ON sufioun_payments(supplier_id);
+CREATE INDEX idx_payments_date ON sufioun_payments(payment_date);
+
+CREATE INDEX idx_users_name ON sufioun_com_users(user_name);
+CREATE INDEX idx_users_role ON sufioun_com_users(role);
+CREATE INDEX idx_users_emp ON sufioun_com_users(employee_id);
+
+CREATE INDEX idx_expense_date ON sufioun_expense_master(expense_date);
+CREATE INDEX idx_expense_dept ON sufioun_expense_master(department_id);
+CREATE INDEX idx_expense_type ON sufioun_expense_master(expense_type_id);
+
+CREATE INDEX idx_prod_cat_name ON sufioun_product_categories(product_cat_name);
+CREATE INDEX idx_parts_cat_name ON sufioun_parts_category(parts_cat_name);
+CREATE INDEX idx_sub_cat_name ON sufioun_sub_categories(sub_cat_name);
+CREATE INDEX idx_sub_cat_prod ON sufioun_sub_categories(product_cat_id);
+
 -- =============================================================================
 -- PART 3: TEST DATA INSERTION SCRIPT (DML)
 -- Context: Electronics Sales and Service
@@ -1929,30 +2204,30 @@ INSERT INTO sufioun_customers (customer_id, customer_name, phone_no, city, rewar
 --------------------------------------------------------------------------------
 -- 04. sufioun_PARTS_CATEGORY
 --------------------------------------------------------------------------------
-INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name) VALUES ('PCAT-01', 'Display Panels');
-INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name) VALUES ('PCAT-02', 'Batteries');
-INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name) VALUES ('PCAT-03', 'Motherboards');
-INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name) VALUES ('PCAT-04', 'Power Supplies');
-INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name) VALUES ('PCAT-05', 'Cooling Fans');
-INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name) VALUES ('PCAT-06', 'Compressors');
-INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name) VALUES ('PCAT-07', 'Keyboards');
-INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name) VALUES ('PCAT-08', 'Charging Ports');
-INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name) VALUES ('PCAT-09', 'Camera Modules');
-INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name) VALUES ('PCAT-10', 'Capacitors/Resistors');
+INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name, sort_order) VALUES ('PCAT-01', 'Display Panels', 1);
+INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name, sort_order) VALUES ('PCAT-02', 'Batteries', 2);
+INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name, sort_order) VALUES ('PCAT-03', 'Motherboards', 3);
+INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name, sort_order) VALUES ('PCAT-04', 'Power Supplies', 4);
+INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name, sort_order) VALUES ('PCAT-05', 'Cooling Fans', 5);
+INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name, sort_order) VALUES ('PCAT-06', 'Compressors', 6);
+INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name, sort_order) VALUES ('PCAT-07', 'Keyboards', 7);
+INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name, sort_order) VALUES ('PCAT-08', 'Charging Ports', 8);
+INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name, sort_order) VALUES ('PCAT-09', 'Camera Modules', 9);
+INSERT INTO sufioun_parts_category (parts_cat_id, parts_cat_name, sort_order) VALUES ('PCAT-10', 'Capacitors/Resistors', 10);
 
 --------------------------------------------------------------------------------
 -- 05. sufioun_PRODUCT_CATEGORIES
 --------------------------------------------------------------------------------
-INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name) VALUES ('CAT-01', 'Smartphones');
-INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name) VALUES ('CAT-02', 'Laptops');
-INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name) VALUES ('CAT-03', 'Televisions');
-INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name) VALUES ('CAT-04', 'Air Conditioners');
-INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name) VALUES ('CAT-05', 'Refrigerators');
-INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name) VALUES ('CAT-06', 'Washing Machines');
-INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name) VALUES ('CAT-07', 'Microwave Ovens');
-INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name) VALUES ('CAT-08', 'Smartwatches');
-INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name) VALUES ('CAT-09', 'Audio Devices');
-INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name) VALUES ('CAT-10', 'Accessories');
+INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name, sort_order) VALUES ('CAT-01', 'Smartphones', 1);
+INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name, sort_order) VALUES ('CAT-02', 'Laptops', 2);
+INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name, sort_order) VALUES ('CAT-03', 'Televisions', 3);
+INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name, sort_order) VALUES ('CAT-04', 'Air Conditioners', 4);
+INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name, sort_order) VALUES ('CAT-05', 'Refrigerators', 5);
+INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name, sort_order) VALUES ('CAT-06', 'Washing Machines', 6);
+INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name, sort_order) VALUES ('CAT-07', 'Microwave Ovens', 7);
+INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name, sort_order) VALUES ('CAT-08', 'Smartwatches', 8);
+INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name, sort_order) VALUES ('CAT-09', 'Audio Devices', 9);
+INSERT INTO sufioun_product_categories (product_cat_id, product_cat_name, sort_order) VALUES ('CAT-10', 'Accessories', 10);
 
 --------------------------------------------------------------------------------
 -- 06. sufioun_BRAND
@@ -1985,44 +2260,44 @@ INSERT INTO sufioun_suppliers (supplier_id, supplier_name, phone_no, contact_per
 --------------------------------------------------------------------------------
 -- 08. sufioun_SERVICE_LIST
 --------------------------------------------------------------------------------
-INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost) VALUES ('SRV-01', 'Display Replacement', 1500);
-INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost) VALUES ('SRV-02', 'Battery Replacement', 500);
-INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost) VALUES ('SRV-03', 'General Servicing (AC)', 2000);
-INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost) VALUES ('SRV-04', 'OS Installation', 800);
-INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost) VALUES ('SRV-05', 'Motherboard Repair', 3500);
-INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost) VALUES ('SRV-06', 'Gas Refill (AC/Fridge)', 2500);
-INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost) VALUES ('SRV-07', 'Water Damage Repair', 4000);
-INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost) VALUES ('SRV-08', 'Speaker/Mic Fix', 600);
-INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost) VALUES ('SRV-09', 'Compressor Check', 1000);
-INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost) VALUES ('SRV-10', 'Diagnostic/Inspection', 300);
+INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost, estimated_time) VALUES ('SRV-01', 'Display Replacement', 1500, 60);
+INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost, estimated_time) VALUES ('SRV-02', 'Battery Replacement', 500, 30);
+INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost, estimated_time) VALUES ('SRV-03', 'General Servicing (AC)', 2000, 120);
+INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost, estimated_time) VALUES ('SRV-04', 'OS Installation', 800, 90);
+INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost, estimated_time) VALUES ('SRV-05', 'Motherboard Repair', 3500, 180);
+INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost, estimated_time) VALUES ('SRV-06', 'Gas Refill (AC/Fridge)', 2500, 45);
+INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost, estimated_time) VALUES ('SRV-07', 'Water Damage Repair', 4000, 240);
+INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost, estimated_time) VALUES ('SRV-08', 'Speaker/Mic Fix', 600, 30);
+INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost, estimated_time) VALUES ('SRV-09', 'Compressor Check', 1000, 60);
+INSERT INTO sufioun_service_list (servicelist_id, service_name, service_cost, estimated_time) VALUES ('SRV-10', 'Diagnostic/Inspection', 300, 30);
 
 --------------------------------------------------------------------------------
 -- 09. sufioun_EXPENSE_LIST
 --------------------------------------------------------------------------------
-INSERT INTO sufioun_expense_list (expense_type_id, type_name) VALUES ('EXP-01', 'Office Rent');
-INSERT INTO sufioun_expense_list (expense_type_id, type_name) VALUES ('EXP-02', 'Electricity Bill');
-INSERT INTO sufioun_expense_list (expense_type_id, type_name) VALUES ('EXP-03', 'Internet Bill');
-INSERT INTO sufioun_expense_list (expense_type_id, type_name) VALUES ('EXP-04', 'Staff Salary');
-INSERT INTO sufioun_expense_list (expense_type_id, type_name) VALUES ('EXP-05', 'Marketing & Ads');
-INSERT INTO sufioun_expense_list (expense_type_id, type_name) VALUES ('EXP-06', 'Transportation');
-INSERT INTO sufioun_expense_list (expense_type_id, type_name) VALUES ('EXP-07', 'Stationery');
-INSERT INTO sufioun_expense_list (expense_type_id, type_name) VALUES ('EXP-08', 'Refreshments');
-INSERT INTO sufioun_expense_list (expense_type_id, type_name) VALUES ('EXP-09', 'Maintenance');
-INSERT INTO sufioun_expense_list (expense_type_id, type_name) VALUES ('EXP-10', 'Miscellaneous');
+INSERT INTO sufioun_expense_list (expense_type_id, type_name, expense_category) VALUES ('EXP-01', 'Office Rent', 'Fixed');
+INSERT INTO sufioun_expense_list (expense_type_id, type_name, expense_category) VALUES ('EXP-02', 'Electricity Bill', 'Utilities');
+INSERT INTO sufioun_expense_list (expense_type_id, type_name, expense_category) VALUES ('EXP-03', 'Internet Bill', 'Utilities');
+INSERT INTO sufioun_expense_list (expense_type_id, type_name, expense_category) VALUES ('EXP-04', 'Staff Salary', 'Payroll');
+INSERT INTO sufioun_expense_list (expense_type_id, type_name, expense_category) VALUES ('EXP-05', 'Marketing & Ads', 'Marketing');
+INSERT INTO sufioun_expense_list (expense_type_id, type_name, expense_category) VALUES ('EXP-06', 'Transportation', 'Operational');
+INSERT INTO sufioun_expense_list (expense_type_id, type_name, expense_category) VALUES ('EXP-07', 'Stationery', 'Office');
+INSERT INTO sufioun_expense_list (expense_type_id, type_name, expense_category) VALUES ('EXP-08', 'Refreshments', 'Office');
+INSERT INTO sufioun_expense_list (expense_type_id, type_name, expense_category) VALUES ('EXP-09', 'Maintenance', 'Operational');
+INSERT INTO sufioun_expense_list (expense_type_id, type_name, expense_category) VALUES ('EXP-10', 'Miscellaneous', 'Other');
 
 --------------------------------------------------------------------------------
 -- 10. sufioun_SUB_CATEGORIES
 --------------------------------------------------------------------------------
-INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id) VALUES ('SCAT-01', 'Android Phones', 'CAT-01');
-INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id) VALUES ('SCAT-02', 'iPhones', 'CAT-01');
-INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id) VALUES ('SCAT-03', 'Gaming Laptops', 'CAT-02');
-INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id) VALUES ('SCAT-04', 'Business Laptops', 'CAT-02');
-INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id) VALUES ('SCAT-05', 'Smart TVs', 'CAT-03');
-INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id) VALUES ('SCAT-06', 'Split ACs', 'CAT-04');
-INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id) VALUES ('SCAT-07', 'Frost Fridges', 'CAT-05');
-INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id) VALUES ('SCAT-08', 'Front Load Washers', 'CAT-06');
-INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id) VALUES ('SCAT-09', 'Fitness Bands', 'CAT-08');
-INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id) VALUES ('SCAT-10', 'Bluetooth Earbuds', 'CAT-09');
+INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id, sort_order) VALUES ('SCAT-01', 'Android Phones', 'CAT-01', 1);
+INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id, sort_order) VALUES ('SCAT-02', 'iPhones', 'CAT-01', 2);
+INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id, sort_order) VALUES ('SCAT-03', 'Gaming Laptops', 'CAT-02', 1);
+INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id, sort_order) VALUES ('SCAT-04', 'Business Laptops', 'CAT-02', 2);
+INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id, sort_order) VALUES ('SCAT-05', 'Smart TVs', 'CAT-03', 1);
+INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id, sort_order) VALUES ('SCAT-06', 'Split ACs', 'CAT-04', 1);
+INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id, sort_order) VALUES ('SCAT-07', 'Frost Fridges', 'CAT-05', 1);
+INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id, sort_order) VALUES ('SCAT-08', 'Front Load Washers', 'CAT-06', 1);
+INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id, sort_order) VALUES ('SCAT-09', 'Fitness Bands', 'CAT-08', 1);
+INSERT INTO sufioun_sub_categories (sub_cat_id, sub_cat_name, product_cat_id, sort_order) VALUES ('SCAT-10', 'Bluetooth Earbuds', 'CAT-09', 1);
 
 --------------------------------------------------------------------------------
 -- 11. sufioun_PARTS 
@@ -2075,9 +2350,9 @@ UPDATE sufioun_departments SET manager_id = 'EMP-01';
 INSERT INTO sufioun_com_users (user_id, user_name, password, role, employee_id) VALUES ('USR-01', 'admin', '12345', 'admin', 'EMP-01');
 INSERT INTO sufioun_com_users (user_id, user_name, password, role, employee_id) VALUES ('USR-02', 'kamal_mgr', '12345', 'manager', 'EMP-02');
 INSERT INTO sufioun_com_users (user_id, user_name, password, role, employee_id) VALUES ('USR-03', 'abdur_sales', '12345', 'user', 'EMP-03');
-INSERT INTO sufioun_com_users (user_id, user_name, password, role, employee_id) VALUES ('USR-04', 'sumon_tech', '12345', 'user', 'EMP-04');
-INSERT INTO sufioun_com_users (user_id, user_name, password, role, employee_id) VALUES ('USR-05', 'nazmul_jtech', '12345', 'user', 'EMP-05');
-INSERT INTO sufioun_com_users (user_id, user_name, password, role, employee_id) VALUES ('USR-06', 'rubel_cash', '12345', 'user', 'EMP-06');
+INSERT INTO sufioun_com_users (user_id, user_name, password, role, employee_id) VALUES ('USR-04', 'sumon_tech', '12345', 'technician', 'EMP-04');
+INSERT INTO sufioun_com_users (user_id, user_name, password, role, employee_id) VALUES ('USR-05', 'nazmul_jtech', '12345', 'technician', 'EMP-05');
+INSERT INTO sufioun_com_users (user_id, user_name, password, role, employee_id) VALUES ('USR-06', 'rubel_cash', '12345', 'cashier', 'EMP-06');
 INSERT INTO sufioun_com_users (user_id, user_name, password, role, employee_id) VALUES ('USR-07', 'ayesha_hr', '12345', 'user', 'EMP-07');
 INSERT INTO sufioun_com_users (user_id, user_name, password, role, employee_id) VALUES ('USR-08', 'faruk_inv', '12345', 'user', 'EMP-08');
 INSERT INTO sufioun_com_users (user_id, user_name, password, role, employee_id) VALUES ('USR-09', 'sajid_it', '12345', 'user', 'EMP-09');
@@ -2161,7 +2436,8 @@ INSERT INTO sufioun_payments (payment_id, payment_date, amount, supplier_id, pay
 INSERT INTO sufioun_payments (payment_id, payment_date, amount, supplier_id, payment_type) VALUES ('PAY-03', '2025-01-23', 500000, 'SUP-03', 'ONLINE');
 INSERT INTO sufioun_payments (payment_id, payment_date, amount, supplier_id, payment_type) VALUES ('PAY-04', '2025-01-24', 400000, 'SUP-04', 'CASH');
 INSERT INTO sufioun_payments (payment_id, payment_date, amount, supplier_id, payment_type) VALUES ('PAY-05', '2025-01-25', 1200000, 'SUP-05', 'BANK');
-INSERT INTO sufioun_payments (payment_id, payment_date, amount, supplier_id, payment_type) VALUES ('PAY-06', '2025-01-26', 800000, 'SUP-06', 'BANK');
+INSERT INTO sufioun_payments (payment_id, payment_date, amount, supplier_id, payment_type) VALUES ('PAY-06', '2025
+-01-26', 800000, 'SUP-06', 'BANK');
 INSERT INTO sufioun_payments (payment_id, payment_date, amount, supplier_id, payment_type) VALUES ('PAY-07', '2025-01-27', 500000, 'SUP-07', 'CASH');
 INSERT INTO sufioun_payments (payment_id, payment_date, amount, supplier_id, payment_type) VALUES ('PAY-08', '2025-01-28', 700000, 'SUP-08', 'ONLINE');
 INSERT INTO sufioun_payments (payment_id, payment_date, amount, supplier_id, payment_type) VALUES ('PAY-09', '2025-01-29', 500000, 'SUP-09', 'BANK');
@@ -2298,51 +2574,47 @@ INSERT INTO sufioun_damage (damage_id, damage_date, reference_no, approved_by) V
 --------------------------------------------------------------------------------
 INSERT INTO sufioun_damage_detail (damage_detail_id, damage_id, product_id, purchase_price, mrp, damage_quantity) VALUES ('DDT-01', 'DMG-01', 'PROD-01', 70000, 85000, 1);
 INSERT INTO sufioun_damage_detail (damage_detail_id, damage_id, product_id, purchase_price, mrp, damage_quantity) VALUES ('DDT-02', 'DMG-02', 'PROD-02', 110000, 130000, 1);
-INSERT INTO sufioun_damage_detail (damage_detail_id, damage_id, product_id, purchase_price, mrp, damage_quantity) VALUES ('DDT-03', 'DMG-03', 'PROD-03', 45000, 55000, 1);
+INSERT INTO sufioun_damage_detail (damage_detail_id, damage_id, product_id, purchase_price, mrp, damage_quantity) VALUES ('DDT-03', 'DMG-03', 'PROD-03', 45000, 55000, 2);
 INSERT INTO sufioun_damage_detail (damage_detail_id, damage_id, product_id, purchase_price, mrp, damage_quantity) VALUES ('DDT-04', 'DMG-04', 'PROD-04', 50000, 65000, 1);
-INSERT INTO sufioun_damage_detail (damage_detail_id, damage_id, product_id, purchase_price, mrp, damage_quantity) VALUES ('DDT-05', 'DMG-05', 'PROD-05', 40000, 52000, 1);
+INSERT INTO sufioun_damage_detail (damage_detail_id, damage_id, product_id, purchase_price, mrp, damage_quantity) VALUES ('DDT-05', 'DMG-05', 'PROD-05', 40000, 52000, 3);
 INSERT INTO sufioun_damage_detail (damage_detail_id, damage_id, product_id, purchase_price, mrp, damage_quantity) VALUES ('DDT-06', 'DMG-06', 'PROD-06', 75000, 90000, 1);
 INSERT INTO sufioun_damage_detail (damage_detail_id, damage_id, product_id, purchase_price, mrp, damage_quantity) VALUES ('DDT-07', 'DMG-07', 'PROD-07', 15000, 19999, 2);
 INSERT INTO sufioun_damage_detail (damage_detail_id, damage_id, product_id, purchase_price, mrp, damage_quantity) VALUES ('DDT-08', 'DMG-08', 'PROD-08', 65000, 80000, 1);
-INSERT INTO sufioun_damage_detail (damage_detail_id, damage_id, product_id, purchase_price, mrp, damage_quantity) VALUES ('DDT-09', 'DMG-09', 'PROD-09', 22000, 28000, 1);
+INSERT INTO sufioun_damage_detail (damage_detail_id, damage_id, product_id, purchase_price, mrp, damage_quantity) VALUES ('DDT-09', 'DMG-09', 'PROD-09', 22000, 28000, 2);
 INSERT INTO sufioun_damage_detail (damage_detail_id, damage_id, product_id, purchase_price, mrp, damage_quantity) VALUES ('DDT-10', 'DMG-10', 'PROD-10', 25000, 32000, 1);
 
 --------------------------------------------------------------------------------
 -- 31. sufioun_EXPENSE_MASTER
 --------------------------------------------------------------------------------
-INSERT INTO sufioun_expense_master (expense_id, expense_date, department_id, expense_type_id, expense_by) VALUES ('EXM-01', '2025-01-31', 'DPT-01', 'EXP-01', 'EMP-02');
-INSERT INTO sufioun_expense_master (expense_id, expense_date, department_id, expense_type_id, expense_by) VALUES ('EXM-02', '2025-01-31', 'DPT-02', 'EXP-02', 'EMP-04');
-INSERT INTO sufioun_expense_master (expense_id, expense_date, department_id, expense_type_id, expense_by) VALUES ('EXM-03', '2025-01-31', 'DPT-03', 'EXP-04', 'EMP-07');
-INSERT INTO sufioun_expense_master (expense_id, expense_date, department_id, expense_type_id, expense_by) VALUES ('EXM-04', '2025-02-15', 'DPT-10', 'EXP-05', 'EMP-01');
-INSERT INTO sufioun_expense_master (expense_id, expense_date, department_id, expense_type_id, expense_by) VALUES ('EXM-05', '2025-02-28', 'DPT-04', 'EXP-07', 'EMP-06');
-INSERT INTO sufioun_expense_master (expense_id, expense_date, department_id, expense_type_id, expense_by) VALUES ('EXM-06', '2025-02-28', 'DPT-06', 'EXP-03', 'EMP-09');
-INSERT INTO sufioun_expense_master (expense_id, expense_date, department_id, expense_type_id, expense_by) VALUES ('EXM-07', '2025-03-01', 'DPT-05', 'EXP-06', 'EMP-10');
-INSERT INTO sufioun_expense_master (expense_id, expense_date, department_id, expense_type_id, expense_by) VALUES ('EXM-08', '2025-03-05', 'DPT-01', 'EXP-08', 'EMP-03');
-INSERT INTO sufioun_expense_master (expense_id, expense_date, department_id, expense_type_id, expense_by) VALUES ('EXM-09', '2025-03-10', 'DPT-02', 'EXP-09', 'EMP-04');
-INSERT INTO sufioun_expense_master (expense_id, expense_date, department_id, expense_type_id, expense_by) VALUES ('EXM-10', '2025-03-15', 'DPT-09', 'EXP-10', 'EMP-01');
+INSERT INTO sufioun_expense_master (expense_id, expense_date, expense_type_id, expense_by) VALUES ('EXM-01', '2025-02-01', 'EXP-01', 'EMP-06');
+INSERT INTO sufioun_expense_master (expense_id, expense_date, expense_type_id, expense_by) VALUES ('EXM-02', '2025-02-02', 'EXP-02', 'EMP-06');
+INSERT INTO sufioun_expense_master (expense_id, expense_date, expense_type_id, expense_by) VALUES ('EXM-03', '2025-02-03', 'EXP-04', 'EMP-06');
+INSERT INTO sufioun_expense_master (expense_id, expense_date, expense_type_id, expense_by) VALUES ('EXM-04', '2025-02-04', 'EXP-03', 'EMP-06');
+INSERT INTO sufioun_expense_master (expense_id, expense_date, expense_type_id, expense_by) VALUES ('EXM-05', '2025-02-05', 'EXP-06', 'EMP-06');
+INSERT INTO sufioun_expense_master (expense_id, expense_date, expense_type_id, expense_by) VALUES ('EXM-06', '2025-02-06', 'EXP-05', 'EMP-06');
+INSERT INTO sufioun_expense_master (expense_id, expense_date, expense_type_id, expense_by) VALUES ('EXM-07', '2025-02-07', 'EXP-07', 'EMP-06');
+INSERT INTO sufioun_expense_master (expense_id, expense_date, expense_type_id, expense_by) VALUES ('EXM-08', '2025-02-08', 'EXP-08', 'EMP-06');
+INSERT INTO sufioun_expense_master (expense_id, expense_date, expense_type_id, expense_by) VALUES ('EXM-09', '2025-02-09', 'EXP-09', 'EMP-06');
+INSERT INTO sufioun_expense_master (expense_id, expense_date, expense_type_id, expense_by) VALUES ('EXM-10', '2025-02-10', 'EXP-10', 'EMP-06');
 
 --------------------------------------------------------------------------------
 -- 32. sufioun_EXPENSE_DETAILS
 --------------------------------------------------------------------------------
-INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-01', 'EXM-01', 'Monthly Showroom Rent', 50000);
-INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-02', 'EXM-02', 'Electricity Bill January', 12000);
-INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-03', 'EXM-03', 'Staff Salaries January', 150000);
-INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-04', 'EXM-04', 'Facebook Campaign', 20000);
-INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-05', 'EXM-05', 'Printing Paper and Pens', 2500);
-INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-06', 'EXM-06', 'Broadband Bill Feb', 3000);
-INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-07', 'EXM-07', 'Delivery Van Fuel', 5000);
-INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-08', 'EXM-08', 'Client Meeting Snacks', 1500);
-INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-09', 'EXM-09', 'AC Filter Cleaning Service', 4000);
-INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-10', 'EXM-10', 'Miscellaneous Office Supplies', 3500);
+INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-01', 'EXM-01', 'February Office Rent', 150000);
+INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-02', 'EXM-02', 'February Electricity Bill', 25000);
+INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-03', 'EXM-03', 'February Staff Salaries', 350000);
+INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-04', 'EXM-04', 'February Internet Bill', 5000);
+INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-05', 'EXM-05', 'February Transportation', 15000);
+INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-06', 'EXM-06', 'Facebook Ads Campaign', 30000);
+INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-07', 'EXM-07', 'Office Supplies', 5000);
+INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-08', 'EXM-08', 'Team Refreshments', 3000);
+INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-09', 'EXM-09', 'Equipment Maintenance', 10000);
+INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, amount) VALUES ('EXD-10', 'EXM-10', 'Miscellaneous Expenses', 2000);
 
 -- =============================================================================
--- UTILITY SCRIPT (Sync existing stock with product info just in case)
+-- END OF SCHEMA
 -- =============================================================================
-UPDATE sufioun_stock s
-SET (supplier_id, product_cat_id, sub_cat_id) = (
-    SELECT supplier_id, category_id, sub_cat_id
-    FROM sufioun_products p
-    WHERE p.product_id = s.product_id
-);
 
 COMMIT;
+
+EXEC DBMS_OUTPUT.PUT_LINE('Schema creation completed successfully!');
