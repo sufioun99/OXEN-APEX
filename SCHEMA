@@ -76,6 +76,11 @@ CREATE TABLE sufioun_company (
     cp_phone_no         VARCHAR2(50),
     tag_line            VARCHAR2(300),
     mission_vision      VARCHAR2(1000),
+    -- Image columns for Oracle APEX
+    image_name          VARCHAR2(500),
+    image_mime_type     VARCHAR2(100),
+    image_blob          BLOB,
+    --
     status              NUMBER,
     cre_by              VARCHAR2(100),
     cre_dt              DATE,
@@ -160,6 +165,11 @@ CREATE TABLE sufioun_customers (
     city          VARCHAR2(100),
     rewards       NUMBER DEFAULT 0,
     remarks       VARCHAR2(1000),
+    -- Image columns for Oracle APEX
+    image_name    VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob    BLOB,
+    --
     status        NUMBER,
     cre_by        VARCHAR2(100),
     cre_dt        DATE,
@@ -199,6 +209,11 @@ CREATE TABLE sufioun_parts_category (
     parts_cat_id    VARCHAR2(50) PRIMARY KEY,
     parts_cat_code  VARCHAR2(50),
     parts_cat_name  VARCHAR2(150) ,
+    -- Image columns for Oracle APEX
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status          NUMBER,
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
@@ -236,6 +251,11 @@ END;
 CREATE TABLE sufioun_product_categories (
     product_cat_id    VARCHAR2(50) PRIMARY KEY,
     product_cat_name  VARCHAR2(150) ,
+    -- Image columns for Oracle APEX
+    image_name        VARCHAR2(500),
+    image_mime_type   VARCHAR2(100),
+    image_blob        BLOB,
+    --
     status            NUMBER,
     cre_by            VARCHAR2(100),
     cre_dt            DATE,
@@ -274,6 +294,11 @@ CREATE TABLE sufioun_brand (
     model_name    VARCHAR2(150),
     brand_size    VARCHAR2(30),
     color         VARCHAR2(50),
+    -- Image columns for Oracle APEX
+    image_name    VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob    BLOB,
+    --
     status        NUMBER,
     cre_by        VARCHAR2(100),
     cre_dt        DATE,
@@ -319,6 +344,11 @@ CREATE TABLE sufioun_suppliers (
     purchase_total NUMBER DEFAULT 0,
     pay_total      NUMBER DEFAULT 0,
     due            NUMBER,
+    -- Image columns for Oracle APEX
+    image_name     VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob     BLOB,
+    --
     status         NUMBER,
     cre_by         VARCHAR2(100),
     cre_dt         DATE,
@@ -473,6 +503,11 @@ CREATE TABLE sufioun_products (
     mrp             NUMBER,
     purchase_price  NUMBER,
     warranty        NUMBER, 
+    -- Image columns for Oracle APEX
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status          NUMBER,
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
@@ -512,6 +547,11 @@ CREATE TABLE sufioun_parts (
     purchase_price NUMBER,
     mrp            NUMBER,
     parts_cat_id   VARCHAR2(50) REFERENCES sufioun_parts_category(parts_cat_id),
+    -- Image columns for Oracle APEX
+    image_name     VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob     BLOB,
+    --
     status         NUMBER,
     cre_by         VARCHAR2(100),
     cre_dt         DATE,
@@ -575,6 +615,8 @@ CREATE TABLE sufioun_employees (
     job_id        VARCHAR2(50) NULL,
     manager_id    VARCHAR2(50), 
     department_id VARCHAR2(50) NULL,
+    image_name          VARCHAR2(500),
+    mime_type     VARCHAR2(100),
     photo         BLOB,
     status        NUMBER,
     cre_by        VARCHAR2(100),
@@ -735,6 +777,15 @@ CREATE TABLE sufioun_service_master (
     total_price         NUMBER(20,4) DEFAULT 0,
     vat                 NUMBER(20,4) DEFAULT 0,
     grand_total         NUMBER(20,4) DEFAULT 0,
+    -- Image columns for Oracle APEX (before service images)
+    image_before_name   VARCHAR2(500),
+    image_before_mime   VARCHAR2(100),
+    image_before_blob   BLOB,
+    -- Image columns for Oracle APEX (after service images)
+    image_after_name    VARCHAR2(500),
+    image_after_mime    VARCHAR2(100),
+    image_after_blob    BLOB,
+    --
     status              NUMBER,
     cre_by              VARCHAR2(100),
     cre_dt              DATE,
