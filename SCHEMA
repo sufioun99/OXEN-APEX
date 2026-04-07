@@ -90,6 +90,11 @@ CREATE TABLE sufioun_company (
     cp_phone_no         VARCHAR2(50),
     tag_line            VARCHAR2(300),
     mission_vision      VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name          VARCHAR2(500),
+    image_mime_type     VARCHAR2(100),
+    image_blob          BLOB,
+    --
     status              NUMBER,
     cre_by              VARCHAR2(100),
     cre_dt              DATE,
@@ -253,6 +258,11 @@ CREATE TABLE sufioun_customers (
     city          VARCHAR2(100),
     rewards       NUMBER(10) DEFAULT 0,
     remarks       VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name    VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob    BLOB,
+    --
     status        NUMBER,
     cre_by        VARCHAR2(100),
     cre_dt        DATE,
@@ -303,6 +313,11 @@ CREATE TABLE sufioun_parts_category (
     parts_cat_id    VARCHAR2(50) PRIMARY KEY,
     parts_cat_code  VARCHAR2(50),
     parts_cat_name  VARCHAR2(150) ,
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status          NUMBER,
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
@@ -351,6 +366,11 @@ END;
 CREATE TABLE sufioun_product_categories (
     product_cat_id    VARCHAR2(50) PRIMARY KEY,
     product_cat_name  VARCHAR2(150) ,
+    -- APEX Image Columns
+    image_name        VARCHAR2(500),
+    image_mime_type   VARCHAR2(100),
+    image_blob        BLOB,
+    --
     status            NUMBER,
     cre_by            VARCHAR2(100),
     cre_dt            DATE,
@@ -472,6 +492,11 @@ CREATE TABLE sufioun_suppliers (
     purchase_total NUMBER DEFAULT 0,
     pay_total      NUMBER DEFAULT 0,
     due            NUMBER,
+    -- APEX Image Columns
+    image_name     VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob     BLOB,
+    --
     status         NUMBER,
     cre_by         VARCHAR2(100),
     cre_dt         DATE,
@@ -664,6 +689,7 @@ END;
 CREATE TABLE sufioun_products (
     product_id      VARCHAR2(50) PRIMARY KEY,
     product_code    VARCHAR2(30),
+  barcode         VARCHAR2(100),
     product_name    VARCHAR2(150) NOT NULL,
     product_desc    VARCHAR2(1000),
     supplier_id     VARCHAR2(50) REFERENCES sufioun_suppliers(supplier_id),
@@ -677,6 +703,11 @@ CREATE TABLE sufioun_products (
     mrp             NUMBER,
     purchase_price  NUMBER,
     warranty        NUMBER, 
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status          NUMBER,
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
@@ -728,6 +759,11 @@ CREATE TABLE sufioun_parts (
     purchase_price NUMBER(15,2),
     mrp            NUMBER(15,2),
     parts_cat_id   VARCHAR2(50) REFERENCES sufioun_parts_category(parts_cat_id),
+    -- APEX Image Columns
+    image_name     VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob     BLOB,
+    --
     status         NUMBER,
     cre_by         VARCHAR2(100),
     cre_dt         DATE,
@@ -1288,6 +1324,9 @@ CREATE TABLE sufioun_service_master (
     total_price         NUMBER(20,4) DEFAULT 0,
     vat                 NUMBER(5,2) DEFAULT 0,
     grand_total         NUMBER(20,4) DEFAULT 0,
+    service_status      VARCHAR2(20) DEFAULT 'RECEIVED',
+    image_before_blob   BLOB,
+    image_after_blob    BLOB,
     status              NUMBER,
     cre_by              VARCHAR2(100),
     cre_dt              DATE,
@@ -2038,6 +2077,7 @@ CREATE TABLE sufioun_expense_master (
     expense_no      VARCHAR2(50) UNIQUE,
     expense_date    DATE,
     expense_type_id VARCHAR2(50),
+  department_id   VARCHAR2(50),
     expense_by      VARCHAR2(100),
     expense_total   NUMBER(15,2),
     notes           VARCHAR2(1000),
@@ -2051,7 +2091,8 @@ CREATE TABLE sufioun_expense_master (
     cre_dt          DATE,
     upd_by          VARCHAR2(100),
     upd_dt          DATE,
-    CONSTRAINT sufioun_fk_ex_mst FOREIGN KEY (expense_type_id) REFERENCES sufioun_expense_list(expense_type_id)
+    CONSTRAINT sufioun_fk_ex_mst FOREIGN KEY (expense_type_id) REFERENCES sufioun_expense_list(expense_type_id),
+    CONSTRAINT sufioun_fk_ex_dept FOREIGN KEY (department_id) REFERENCES sufioun_departments(department_id)
 )
 COMMENT ON TABLE sufioun_expense_master IS 'Expense Transaction Header';
 /
