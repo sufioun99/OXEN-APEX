@@ -3,7 +3,7 @@
 -- Electronics Sales and Service Management System
 -- Contains: 
 --   1. Dynamic Teardown (Drops existing objects)
---   2. Schema Creation (Tables, Sequences, Triggers, Procedures)
+--   2. Schema Creation (Tables, Views, Sequences, Indexes, Triggers, Procedures)
 --   3. Test Data Insertion (10 rows per table)
 -- =============================================================================
 
@@ -19,17 +19,29 @@ DECLARE
         SELECT object_name, object_type
         FROM user_objects
         WHERE object_name LIKE 'SUFIOUN_%'
-          AND object_type IN ('TABLE', 'VIEW', 'SEQUENCE', 'PROCEDURE', 'FUNCTION', 'TRIGGER', 'PACKAGE')
+        AND object_type IN (
+          'TABLE',
+          'VIEW',
+          'SEQUENCE',
+          'INDEX',
+          'PROCEDURE',
+          'FUNCTION',
+          'TRIGGER',
+          'PACKAGE',
+          'PACKAGE BODY'
+        )
         ORDER BY
             CASE object_type
                 WHEN 'TRIGGER' THEN 1
                 WHEN 'PROCEDURE' THEN 2
                 WHEN 'FUNCTION' THEN 3
-                WHEN 'PACKAGE' THEN 4
-                WHEN 'VIEW' THEN 5
-                WHEN 'TABLE' THEN 6
-                WHEN 'SEQUENCE' THEN 7
-                ELSE 8
+          WHEN 'PACKAGE BODY' THEN 4
+          WHEN 'PACKAGE' THEN 5
+          WHEN 'VIEW' THEN 6
+          WHEN 'INDEX' THEN 7
+          WHEN 'TABLE' THEN 8
+          WHEN 'SEQUENCE' THEN 9
+          ELSE 10
             END;
     v_sql VARCHAR2(500);
 BEGIN
@@ -63,7 +75,7 @@ END;
 
 --------------------------------------------------------------------------------
 -- 01. sufioun_COMPANY
--- Stores company/branch information with logo support
+-- Stores mother company information
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_company (
     company_id          VARCHAR2(50) PRIMARY KEY,
@@ -92,7 +104,7 @@ LOB (image_blob) STORE AS (
     CACHE
     COMPRESS HIGH
 )
-COMMENT ON TABLE sufioun_company IS 'Company/Branch Information Table';
+COMMENT ON TABLE sufioun_company IS 'Mother Company Information Table';
 /
 
 CREATE SEQUENCE sufioun_company_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
@@ -118,7 +130,66 @@ END;
 /
 
 --------------------------------------------------------------------------------
--- 02. sufioun_JOBS
+-- 02. sufioun_BRANCHES
+-- Branch master under mother company
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_branches (
+  branch_id       VARCHAR2(50) PRIMARY KEY,
+  company_id      VARCHAR2(50) NOT NULL,
+  branch_code     VARCHAR2(50) NOT NULL UNIQUE,
+  branch_name     VARCHAR2(200) NOT NULL,
+  phone_no        VARCHAR2(50) UNIQUE,
+  email           VARCHAR2(200) UNIQUE,
+  address         VARCHAR2(300),
+  location        VARCHAR2(200),
+  is_hq           NUMBER(1) DEFAULT 0 CHECK (is_hq IN (0, 1)),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+  status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+  cre_by          VARCHAR2(100),
+  cre_dt          DATE,
+  upd_by          VARCHAR2(100),
+  upd_dt          DATE,
+  CONSTRAINT sufioun_fk_branch_company FOREIGN KEY (company_id) REFERENCES sufioun_company(company_id),
+  CONSTRAINT sufioun_uk_branch_name UNIQUE (company_id, branch_name)
+)
+COMMENT ON TABLE sufioun_branches IS 'Branch Master Data';
+/
+
+CREATE SEQUENCE sufioun_branches_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_branches_bi
+BEFORE INSERT OR UPDATE ON sufioun_branches FOR EACH ROW
+DECLARE
+  v_seq NUMBER;
+  v_code VARCHAR2(100);
+BEGIN
+  IF INSERTING AND :NEW.branch_id IS NULL THEN
+    v_seq := sufioun_branches_seq.NEXTVAL;
+    IF :NEW.branch_code IS NOT NULL THEN
+      :NEW.branch_id := UPPER(TRIM(:NEW.branch_code));
+    ELSE
+      v_code := UPPER(SUBSTR(TRIM(:NEW.branch_name), 1, 3));
+      :NEW.branch_id := NVL(v_code, 'BRN') || '-' || LPAD(v_seq, 2, '0');
+    END IF;
+  END IF;
+
+  IF INSERTING THEN
+    IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+    IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+    IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+  ELSIF UPDATING THEN
+    :NEW.upd_by := USER;
+    :NEW.upd_dt := SYSDATE;
+  END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 03. sufioun_JOBS
 -- Job/Position definitions with grade system
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_jobs (
@@ -129,6 +200,11 @@ CREATE TABLE sufioun_jobs (
     min_salary   NUMBER(15,2),
     max_salary   NUMBER(15,2),
     job_desc     VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status       NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by       VARCHAR2(100),
     cre_dt       DATE,
@@ -321,10 +397,13 @@ END;
 CREATE TABLE sufioun_brand (
     brand_id      VARCHAR2(50) PRIMARY KEY,
     brand_name    VARCHAR2(150),
-    model_name    VARCHAR2(150),
-    brand_size    VARCHAR2(30),
-    color         VARCHAR2(50),
-    status        NUMBER,
+    brand_desc    VARCHAR2(500),
+    -- APEX Image Columns
+    image_name    VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob    BLOB,
+    --
+    status        NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by        VARCHAR2(100),
     cre_dt        DATE,
     upd_by        VARCHAR2(100),
@@ -430,6 +509,11 @@ CREATE TABLE sufioun_service_list (
     service_desc   VARCHAR2(1000),
     service_cost   NUMBER(15,2) DEFAULT 0,
     estimated_time NUMBER(5) DEFAULT 0,
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status         NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by         VARCHAR2(100),
     cre_dt         DATE,
@@ -471,6 +555,11 @@ CREATE TABLE sufioun_expense_list (
     description     VARCHAR2(1000),
     default_amount  NUMBER(15,2),
     expense_category VARCHAR2(100),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
@@ -569,6 +658,9 @@ CREATE TABLE sufioun_products (
     category_id     VARCHAR2(50) REFERENCES sufioun_product_categories(product_cat_id),
     sub_cat_id      VARCHAR2(50) REFERENCES sufioun_sub_categories(sub_cat_id),
     brand_id        VARCHAR2(50) REFERENCES sufioun_brand(brand_id),
+    model_name      VARCHAR2(150),
+    size            VARCHAR2(30),
+    color           VARCHAR2(50),
     uom             VARCHAR2(20),
     mrp             NUMBER,
     purchase_price  NUMBER,
@@ -665,22 +757,27 @@ END;
 /
 
 --------------------------------------------------------------------------------
--- 13. sufioun_DEPARTMENTS
+-- 14. sufioun_DEPARTMENTS
 -- Department/Unit organization
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_departments (
     department_id   VARCHAR2(50) PRIMARY KEY,
     department_name VARCHAR2(100),
     department_desc VARCHAR2(500),
-    manager_id      VARCHAR2(50), 
-    company_id      VARCHAR2(50),
+    manager_id      VARCHAR2(50),
+    branch_id       VARCHAR2(50) NOT NULL,
     location        VARCHAR2(200),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
     upd_by          VARCHAR2(100),
     upd_dt          DATE,
-    CONSTRAINT sufioun_fk_dept_company FOREIGN KEY (company_id) REFERENCES sufioun_company(company_id)
+    CONSTRAINT sufioun_fk_dept_branch FOREIGN KEY (branch_id) REFERENCES sufioun_branches(branch_id)
 )
 COMMENT ON TABLE sufioun_departments IS 'Department/Unit Organization';
 /
@@ -708,7 +805,7 @@ END;
 /
 
 --------------------------------------------------------------------------------
--- 14. sufioun_EMPLOYEES
+-- 15. sufioun_EMPLOYEES
 -- Employee master with photo support
 --------------------------------------------------------------------------------
 CREATE TABLE sufioun_employees (
@@ -723,7 +820,7 @@ CREATE TABLE sufioun_employees (
     salary        NUMBER(15,2),
     job_id        VARCHAR2(50),
     manager_id    VARCHAR2(50), 
-    department_id VARCHAR2(50) NULL,
+    department_id VARCHAR2(50),
     photo         BLOB,
     emp_code      VARCHAR2(50),
     -- APEX Image Columns for Photo
@@ -808,6 +905,11 @@ CREATE TABLE sufioun_sales_master (
     sales_by       VARCHAR2(50),
     payment_status VARCHAR2(20) DEFAULT 'PENDING',
     notes          VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status         NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1, 2)),
     cre_by         VARCHAR2(100),
     cre_dt         DATE,
@@ -853,6 +955,11 @@ CREATE TABLE sufioun_sales_return_master (
     total_amount    NUMBER(20,4) DEFAULT 0,
     reason          VARCHAR2(1000),
     approved_by     VARCHAR2(50),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
@@ -950,6 +1057,11 @@ CREATE TABLE sufioun_product_order_master (
     grand_total   NUMBER(20,4) DEFAULT 0,
     order_status  VARCHAR2(30) DEFAULT 'PENDING',
     notes         VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status        NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by        VARCHAR2(100),
     cre_dt        DATE,
@@ -998,6 +1110,11 @@ CREATE TABLE sufioun_product_receive_master (
     grand_total     NUMBER(20,4) DEFAULT 0,   
     receive_status  VARCHAR2(30) DEFAULT 'RECEIVED',
     notes           VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
@@ -1070,6 +1187,11 @@ CREATE TABLE sufioun_product_return_master (
     grand_total     NUMBER(20,4) DEFAULT 0,
     return_reason   VARCHAR2(1000),
     approved_by     VARCHAR2(50),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
@@ -1113,6 +1235,11 @@ CREATE TABLE sufioun_damage (
     reference_no VARCHAR2(100),
     total_loss NUMBER(15,2) DEFAULT 0,
     damage_reason VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)), 
     approved_by VARCHAR2(50),
     approval_date DATE,
@@ -1156,6 +1283,11 @@ CREATE TABLE sufioun_stock (
     last_update     TIMESTAMP DEFAULT SYSTIMESTAMP,
     location        VARCHAR2(100),
     rack_no         VARCHAR2(50),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     CONSTRAINT sufioun_fk_s_p       FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id),
     CONSTRAINT sufioun_fk_s_sup     FOREIGN KEY (supplier_id) REFERENCES sufioun_suppliers(supplier_id),
     CONSTRAINT sufioun_fk_prod_cat   FOREIGN KEY (product_cat_id) REFERENCES sufioun_product_categories(product_cat_id),
@@ -1195,6 +1327,11 @@ CREATE TABLE sufioun_service_details (
     line_total         NUMBER(20,4) DEFAULT 0,
     description        VARCHAR2(1000), 
     warranty_status    VARCHAR2(50) CHECK (warranty_status IN ('Y', 'N')),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     CONSTRAINT sufioun_fk_sd_master FOREIGN KEY (service_id) REFERENCES sufioun_service_master(service_id),
     CONSTRAINT sufioun_fk_sd_list   FOREIGN KEY (servicelist_id) REFERENCES sufioun_service_list(servicelist_id),
     CONSTRAINT sufioun_fk_sd_parts  FOREIGN KEY (parts_id) REFERENCES sufioun_parts(parts_id),
@@ -1246,6 +1383,11 @@ CREATE TABLE sufioun_sales_detail (
     quantity        NUMBER(10),
     line_total      NUMBER(20,4) GENERATED ALWAYS AS ((mrp - discount_amount) * quantity) VIRTUAL,
     description     VARCHAR2(1000), 
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     CONSTRAINT sufioun_fk_sdt_inv  FOREIGN KEY (invoice_id) REFERENCES sufioun_sales_master(invoice_id) ON DELETE CASCADE,
     CONSTRAINT sufioun_fk_sdt_prod FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
 )
@@ -1326,6 +1468,11 @@ CREATE TABLE sufioun_sales_return_details (
     item_total          NUMBER(20,4),
     qty_return          NUMBER(10),
     reason              VARCHAR2(4000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     CONSTRAINT sufioun_fk_srd_mst FOREIGN KEY (sales_return_id) REFERENCES sufioun_sales_return_master(sales_return_id),
     CONSTRAINT sufioun_fk_srd_prd FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
 )
@@ -1374,6 +1521,11 @@ CREATE TABLE sufioun_product_order_detail (
     quantity        NUMBER(10),
     line_total      NUMBER(20,4) GENERATED ALWAYS AS (purchase_price * quantity) VIRTUAL,
     delivered_qty   NUMBER(10) DEFAULT 0,
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     CONSTRAINT sufioun_fk_pod_mst FOREIGN KEY (order_id) REFERENCES sufioun_product_order_master(order_id),
     CONSTRAINT sufioun_fk_pod_prd FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
 )
@@ -1456,6 +1608,11 @@ CREATE TABLE sufioun_product_receive_details (
     receive_quantity NUMBER(10),
     line_total       NUMBER(20,4) GENERATED ALWAYS AS (purchase_price * receive_quantity) VIRTUAL,
     order_detail_id  VARCHAR2(50),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     CONSTRAINT sufioun_fk_prd_mst FOREIGN KEY (receive_id) REFERENCES sufioun_product_receive_master(receive_id),
     CONSTRAINT sufioun_fk_prd_prd FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
 )
@@ -1533,6 +1690,11 @@ CREATE TABLE sufioun_product_return_details (
     return_quantity  NUMBER(10), 
     line_total       NUMBER(20,4) GENERATED ALWAYS AS (purchase_price * return_quantity) VIRTUAL,
     reason           VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     CONSTRAINT sufioun_fk_prdet_mst FOREIGN KEY (return_id) REFERENCES sufioun_product_return_master(return_id),
     CONSTRAINT sufioun_fk_prdet_prd FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
 )
@@ -1601,6 +1763,11 @@ CREATE TABLE sufioun_expense_master (
     expense_by      VARCHAR2(100),
     expense_total   NUMBER(15,2),
     notes           VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by          VARCHAR2(100),
     cre_dt          DATE,
@@ -1637,6 +1804,11 @@ CREATE TABLE sufioun_expense_details (
     expense_id        VARCHAR2(50) NOT NULL,
     description       VARCHAR2(1000),
     amount            NUMBER(15,2) DEFAULT 0,
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     CONSTRAINT sufioun_fk_ex_det_mst FOREIGN KEY (expense_id) REFERENCES sufioun_expense_master(expense_id)
 )
 COMMENT ON TABLE sufioun_expense_details IS 'Expense Line Items';
@@ -1676,6 +1848,11 @@ CREATE TABLE sufioun_damage_detail (
     damage_quantity  NUMBER(10),
     line_total       NUMBER(15,2) GENERATED ALWAYS AS (purchase_price * damage_quantity) VIRTUAL,
     reason           VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     CONSTRAINT sufioun_fk_dmg_mst FOREIGN KEY (damage_id) REFERENCES sufioun_damage(damage_id),
     CONSTRAINT sufioun_fk_dmg_prd FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
 )
@@ -1717,6 +1894,11 @@ CREATE TABLE sufioun_com_users (
     employee_id VARCHAR2(50),
     last_login  DATE,
     is_online   NUMBER(1) DEFAULT 0,
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     status      NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
     cre_by      VARCHAR2(100),
     cre_dt      DATE,
@@ -1759,6 +1941,11 @@ CREATE TABLE sufioun_payments (
     payment_type VARCHAR2(50),
     reference_no VARCHAR2(100),
     notes        VARCHAR2(500),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
     CONSTRAINT sufioun_fk_pay_sup FOREIGN KEY (supplier_id) REFERENCES sufioun_suppliers(supplier_id),
     CONSTRAINT sufioun_chk_pay_type CHECK (UPPER(payment_type) IN ('CASH','ONLINE','BANK','CHEQUE'))
 )
@@ -2097,6 +2284,8 @@ END;
 -- 35. PERFORMANCE INDEXES FOR ORACLE APEX
 --------------------------------------------------------------------------------
 CREATE INDEX idx_company_status ON sufioun_company(status);
+CREATE INDEX idx_branch_company ON sufioun_branches(company_id);
+CREATE INDEX idx_branch_status ON sufioun_branches(status);
 CREATE INDEX idx_products_name ON sufioun_products(product_name);
 CREATE INDEX idx_products_cat ON sufioun_products(category_id);
 CREATE INDEX idx_products_brand ON sufioun_products(brand_id);
@@ -2113,6 +2302,7 @@ CREATE INDEX idx_customers_city ON sufioun_customers(city);
 CREATE INDEX idx_employees_dept ON sufioun_employees(department_id);
 CREATE INDEX idx_employees_job ON sufioun_employees(job_id);
 CREATE INDEX idx_employees_mgr ON sufioun_employees(manager_id);
+CREATE INDEX idx_dept_branch ON sufioun_departments(branch_id);
 
 CREATE INDEX idx_sales_inv ON sufioun_sales_master(invoice_date);
 CREATE INDEX idx_sales_cust ON sufioun_sales_master(customer_id);
@@ -2162,19 +2352,20 @@ CREATE INDEX idx_sub_cat_prod ON sufioun_sub_categories(product_cat_id);
 --------------------------------------------------------------------------------
 -- 01. sufioun_COMPANY
 --------------------------------------------------------------------------------
-INSERT INTO sufioun_company (company_id, company_name, phone_no, email, address, status) VALUES ('COM-01', 'Sufioun Electronics HQ', '01711000001', 'hq@sufioun.com', 'Dhaka, BD', 1);
-INSERT INTO sufioun_company (company_id, company_name, phone_no, email, address, status) VALUES ('COM-02', 'Sufioun Branch North', '01711000002', 'north@sufioun.com', 'Uttara, BD', 1);
-INSERT INTO sufioun_company (company_id, company_name, phone_no, email, address, status) VALUES ('COM-03', 'Sufioun Branch South', '01711000003', 'south@sufioun.com', 'Jatrabari, BD', 1);
-INSERT INTO sufioun_company (company_id, company_name, phone_no, email, address, status) VALUES ('COM-04', 'Sufioun Branch East', '01711000004', 'east@sufioun.com', 'Badda, BD', 1);
-INSERT INTO sufioun_company (company_id, company_name, phone_no, email, address, status) VALUES ('COM-05', 'Sufioun Branch West', '01711000005', 'west@sufioun.com', 'Mirpur, BD', 1);
-INSERT INTO sufioun_company (company_id, company_name, phone_no, email, address, status) VALUES ('COM-06', 'Sufioun Service Center A', '01711000006', 'srv_a@sufioun.com', 'Gulshan, BD', 1);
-INSERT INTO sufioun_company (company_id, company_name, phone_no, email, address, status) VALUES ('COM-07', 'Sufioun Service Center B', '01711000007', 'srv_b@sufioun.com', 'Banani, BD', 1);
-INSERT INTO sufioun_company (company_id, company_name, phone_no, email, address, status) VALUES ('COM-08', 'Sufioun Warehouse Main', '01711000008', 'wh_main@sufioun.com', 'Gazipur, BD', 1);
-INSERT INTO sufioun_company (company_id, company_name, phone_no, email, address, status) VALUES ('COM-09', 'Sufioun Corporate', '01711000009', 'corp@sufioun.com', 'Motijheel, BD', 1);
-INSERT INTO sufioun_company (company_id, company_name, phone_no, email, address, status) VALUES ('COM-10', 'Sufioun Outlet Prime', '01711000010', 'prime@sufioun.com', 'Dhanmondi, BD', 1);
+INSERT INTO sufioun_company (company_id, company_name, phone_no, email, address, status) VALUES ('COM-01', 'Sufioun Electronics', '01711000001', 'hq@sufioun.com', 'Dhaka, BD', 1);
 
 --------------------------------------------------------------------------------
--- 02. sufioun_JOBS
+-- 02. sufioun_BRANCHES
+--------------------------------------------------------------------------------
+INSERT INTO sufioun_branches (branch_id, company_id, branch_code, branch_name, phone_no, email, address, location, is_hq, status)
+VALUES ('BR-01', 'COM-01', 'BR-01', 'Dhaka HQ', '01711000001', 'hq@sufioun.com', 'Dhaka, BD', 'Dhaka', 1, 1);
+INSERT INTO sufioun_branches (branch_id, company_id, branch_code, branch_name, phone_no, email, address, location, is_hq, status)
+VALUES ('BR-02', 'COM-01', 'BR-02', 'North Branch', '01711000002', 'north@sufioun.com', 'Rangpur, BD', 'Rangpur', 0, 1);
+INSERT INTO sufioun_branches (branch_id, company_id, branch_code, branch_name, phone_no, email, address, location, is_hq, status)
+VALUES ('BR-03', 'COM-01', 'BR-03', 'Central Branch', '01711000003', 'central@sufioun.com', 'Gazipur, BD', 'Gazipur', 0, 1);
+
+--------------------------------------------------------------------------------
+-- 03. sufioun_JOBS
 --------------------------------------------------------------------------------
 INSERT INTO sufioun_jobs (job_id, job_code, job_title, job_grade, min_salary, max_salary) VALUES ('JOB-01', 'MGR', 'Branch Manager', 'A', 50000, 100000);
 INSERT INTO sufioun_jobs (job_id, job_code, job_title, job_grade, min_salary, max_salary) VALUES ('JOB-02', 'SALES', 'Sales Representative', 'B', 20000, 45000);
@@ -2314,18 +2505,18 @@ INSERT INTO sufioun_parts (parts_id, parts_name, parts_cat_id, purchase_price, m
 INSERT INTO sufioun_parts (parts_id, parts_name, parts_cat_id, purchase_price, mrp) VALUES ('PRT-10', 'CPU Cooling Fan', 'PCAT-05', 500, 1000);
 
 --------------------------------------------------------------------------------
--- 12. sufioun_DEPARTMENTS 
+-- 13. sufioun_DEPARTMENTS
 --------------------------------------------------------------------------------
-INSERT INTO sufioun_departments (department_id, department_name, company_id) VALUES ('DPT-01', 'Sales', 'COM-01');
-INSERT INTO sufioun_departments (department_id, department_name, company_id) VALUES ('DPT-02', 'Service & Repair', 'COM-01');
-INSERT INTO sufioun_departments (department_id, department_name, company_id) VALUES ('DPT-03', 'Human Resources', 'COM-01');
-INSERT INTO sufioun_departments (department_id, department_name, company_id) VALUES ('DPT-04', 'Accounts & Finance', 'COM-01');
-INSERT INTO sufioun_departments (department_id, department_name, company_id) VALUES ('DPT-05', 'Inventory & Logistics', 'COM-01');
-INSERT INTO sufioun_departments (department_id, department_name, company_id) VALUES ('DPT-06', 'IT Support', 'COM-01');
-INSERT INTO sufioun_departments (department_id, department_name, company_id) VALUES ('DPT-07', 'Sales - North', 'COM-02');
-INSERT INTO sufioun_departments (department_id, department_name, company_id) VALUES ('DPT-08', 'Service - North', 'COM-02');
-INSERT INTO sufioun_departments (department_id, department_name, company_id) VALUES ('DPT-09', 'Management', 'COM-09');
-INSERT INTO sufioun_departments (department_id, department_name, company_id) VALUES ('DPT-10', 'Marketing', 'COM-09');
+INSERT INTO sufioun_departments (department_id, department_name, branch_id) VALUES ('DPT-01', 'Sales', 'BR-01');
+INSERT INTO sufioun_departments (department_id, department_name, branch_id) VALUES ('DPT-02', 'Service & Repair', 'BR-01');
+INSERT INTO sufioun_departments (department_id, department_name, branch_id) VALUES ('DPT-03', 'Human Resources', 'BR-01');
+INSERT INTO sufioun_departments (department_id, department_name, branch_id) VALUES ('DPT-04', 'Accounts & Finance', 'BR-01');
+INSERT INTO sufioun_departments (department_id, department_name, branch_id) VALUES ('DPT-05', 'Inventory & Logistics', 'BR-03');
+INSERT INTO sufioun_departments (department_id, department_name, branch_id) VALUES ('DPT-06', 'IT Support', 'BR-03');
+INSERT INTO sufioun_departments (department_id, department_name, branch_id) VALUES ('DPT-07', 'Sales - North', 'BR-02');
+INSERT INTO sufioun_departments (department_id, department_name, branch_id) VALUES ('DPT-08', 'Service - North', 'BR-02');
+INSERT INTO sufioun_departments (department_id, department_name, branch_id) VALUES ('DPT-09', 'Management', 'BR-01');
+INSERT INTO sufioun_departments (department_id, department_name, branch_id) VALUES ('DPT-10', 'Marketing', 'BR-01');
 
 --------------------------------------------------------------------------------
 -- 13. sufioun_EMPLOYEES 
@@ -2617,4 +2808,1023 @@ INSERT INTO sufioun_expense_details (expense_det_id, expense_id, description, am
 
 COMMIT;
 
-EXEC DBMS_OUTPUT.PUT_LINE('Schema creation completed successfully!');
+--ALL VIEWS FOR REPORTS
+
+--1)SUFIOUN_DASH_KPI_V
+
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_DASH_KPI_V" ("METRIC_NAME", "METRIC_VALUE", "ICON_CLASS", "COLOR_CLASS") AS 
+  SELECT 'Total Customers' metric_name,
+       TO_CHAR(COUNT(*)) metric_value,
+       'fa fa-users' icon_class,
+       'u-color-1' color_class
+FROM sufioun_customers WHERE status = 1
+
+UNION ALL
+SELECT 'Current Month Sales',
+       TO_CHAR(NVL(SUM(grand_total), 0), 'FML999,999,999.00'),
+       'fa fa-money-bill' ,
+       'u-color-2'
+FROM sufioun_sales_master
+WHERE TRUNC(invoice_date,'MM') = TRUNC(SYSDATE,'MM') AND status = 1
+
+UNION ALL
+SELECT 'Total Active Employees',
+       TO_CHAR(COUNT(*)),
+       'fa fa-id-badge',
+       'u-color-3'
+FROM sufioun_employees WHERE status = 1
+
+UNION ALL
+SELECT 'Items in Stock',
+       TO_CHAR(NVL(SUM(quantity), 0)),
+       'fa fa-cubes',
+       'u-color-4'
+FROM sufioun_stock
+
+UNION ALL
+SELECT 'Low Stock Items (< 20)',
+       TO_CHAR(COUNT(*)),
+       'fa fa-exclamation-triangle',
+       'u-color-5'
+FROM sufioun_stock
+WHERE NVL(quantity,0) < 20
+
+UNION ALL
+SELECT 'Out of Stock',
+       TO_CHAR(COUNT(*)),
+       'fa fa-ban',
+       'u-color-6'
+FROM sufioun_stock
+WHERE NVL(quantity,0) = 0;
+
+--2)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_DASH_LOW_STOCK_V" ("PRODUCT_NAME", "QUANTITY", "SUPPLIER_NAME", "QTY_CLASS") AS 
+  SELECT 
+  p.product_name,
+  s.quantity,
+  sup.supplier_name,
+  CASE 
+    WHEN NVL(s.quantity,0) <= 5 THEN 'badge-danger'
+    WHEN NVL(s.quantity,0) <= 10 THEN 'badge-warn'
+    ELSE 'badge-info'
+  END AS qty_class
+FROM sufioun_stock s
+JOIN sufioun_products p ON p.product_id = s.product_id
+JOIN sufioun_suppliers sup ON sup.supplier_id = p.supplier_id
+WHERE NVL(s.quantity,0) < 20
+ORDER BY s.quantity ASC;
+--3)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_DASH_PAYABLES_BREAKDOWN_V" ("LABEL", "VAL") AS 
+  SELECT 'Paid' label, NVL(SUM(NVL(pay_total,0)),0) val
+FROM sufioun_suppliers WHERE status=1
+UNION ALL
+SELECT 'Due' label, NVL(SUM(NVL(due,0)),0) val
+FROM sufioun_suppliers WHERE status=1;
+--4)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_DASH_PAYABLES_KPI_V" ("METRIC_NAME", "METRIC_VALUE", "ICON_CLASS", "COLOR_CLASS") AS 
+  SELECT
+  'Total Payable Due' AS metric_name,
+  TO_CHAR(NVL(SUM(NVL(due,0)),0), 'FML999,999,999,990.00') AS metric_value,
+  'fa fa-hand-holding-dollar' AS icon_class,
+  'u-color-6' AS color_class
+FROM sufioun_suppliers
+WHERE status = 1
+
+UNION ALL
+SELECT
+  'Suppliers with Due' AS metric_name,
+  TO_CHAR(COUNT(*)) AS metric_value,
+  'fa fa-truck' AS icon_class,
+  'u-color-5' AS color_class
+FROM sufioun_suppliers
+WHERE status = 1
+  AND NVL(due,0) > 0
+
+UNION ALL
+SELECT
+  'Total Purchased' AS metric_name,
+  TO_CHAR(NVL(SUM(NVL(purchase_total,0)),0), 'FML999,999,999,990.00') AS metric_value,
+  'fa fa-cart-shopping' AS icon_class,
+  'u-color-4' AS color_class
+FROM sufioun_suppliers
+WHERE status = 1
+
+UNION ALL
+SELECT
+  'Total Paid' AS metric_name,
+  TO_CHAR(NVL(SUM(NVL(pay_total,0)),0), 'FML999,999,999,990.00') AS metric_value,
+  'fa fa-credit-card' AS icon_class,
+  'u-color-3' AS color_class
+FROM sufioun_suppliers
+WHERE status = 1;
+--5)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_DASH_RECENT_SALES_V" ("INVOICE_ID", "INVOICE_DATE", "GRAND_TOTAL", "CUSTOMER_ID", "SALES_BY") AS 
+  SELECT "INVOICE_ID","INVOICE_DATE","GRAND_TOTAL","CUSTOMER_ID","SALES_BY"
+FROM (
+    SELECT
+        invoice_id,
+        invoice_date,
+        grand_total,
+        customer_id,
+        sales_by
+    FROM sufioun_sales_master
+    WHERE status = 1
+    ORDER BY invoice_date DESC, invoice_id DESC
+)
+WHERE ROWNUM <= 10;
+--6)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_DASH_SALES_TREND_V" ("MONTH_START", "MONTH_LABEL", "TOTAL_SALES") AS 
+  WITH mx AS (
+  SELECT MAX(invoice_date) AS max_dt
+  FROM sufioun_sales_master
+  WHERE status = 1
+),
+months AS (
+  SELECT ADD_MONTHS(TRUNC(mx.max_dt,'MM'), -11) + NUMTOYMINTERVAL(LEVEL-1,'MONTH') AS month_start
+  FROM mx
+  CONNECT BY LEVEL <= 12
+)
+SELECT
+  m.month_start,
+  TO_CHAR(m.month_start,'Mon YYYY') AS month_label,
+  NVL(SUM(s.grand_total),0) AS total_sales
+FROM months m
+LEFT JOIN sufioun_sales_master s
+  ON TRUNC(s.invoice_date,'MM') = m.month_start
+ AND s.status = 1
+GROUP BY m.month_start
+ORDER BY m.month_start;
+--7)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_DASH_SERVICE_TREND_V" ("MONTH_START", "MONTH_LABEL", "SERVICE_JOBS", "SERVICE_REVENUE") AS 
+  WITH mx AS (
+  SELECT MAX(service_date) AS max_dt
+  FROM sufioun_service_master
+  WHERE status = 1
+),
+base AS (
+  SELECT ADD_MONTHS(TRUNC(mx.max_dt,'MM'), -11) AS start_dt,
+         TRUNC(mx.max_dt,'MM') AS end_dt
+  FROM mx
+),
+months AS (
+  SELECT ADD_MONTHS((SELECT start_dt FROM base), LEVEL-1) AS month_start
+  FROM dual
+  CONNECT BY LEVEL <= 12
+)
+SELECT
+  m.month_start,
+  TO_CHAR(m.month_start, 'Mon YYYY') AS month_label,
+  COUNT(s.service_id) AS service_jobs,
+  NVL(SUM(NVL(s.grand_total,0)),0) AS service_revenue
+FROM months m
+LEFT JOIN sufioun_service_master s
+  ON TRUNC(s.service_date,'MM') = m.month_start
+ AND s.status = 1
+GROUP BY m.month_start
+ORDER BY m.month_start;
+--8)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_DASH_STOCK_CAT_V" ("CATEGORY_NAME", "TOTAL_STOCK") AS 
+  SELECT 
+    c.product_cat_name AS category_name, 
+    NVL(SUM(s.quantity), 0) AS total_stock
+FROM sufioun_product_categories c
+LEFT JOIN sufioun_stock s ON c.product_cat_id = s.product_cat_id
+WHERE c.status = 1
+GROUP BY c.product_cat_name;
+--9)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_DASH_TOP_DUE_SUPPLIERS_V" ("SUPPLIER_NAME", "PHONE_NO", "DUE") AS 
+  SELECT "SUPPLIER_NAME","PHONE_NO","DUE"
+FROM (
+  SELECT
+    supplier_name,
+    phone_no,
+    NVL(due,0) AS due
+  FROM sufioun_suppliers
+  WHERE status = 1
+    AND NVL(due,0) > 0
+  ORDER BY NVL(due,0) DESC
+)
+WHERE ROWNUM <= 10;
+--10)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_DASH_TOP_STOCK_PRODUCTS_V" ("PRODUCT_NAME", "QTY") AS 
+  SELECT "PRODUCT_NAME","QTY"
+FROM (
+    SELECT
+        p.product_name,
+        SUM(NVL(s.quantity,0)) AS qty
+    FROM sufioun_stock s
+    JOIN sufioun_products p ON p.product_id = s.product_id
+    GROUP BY p.product_name
+    ORDER BY qty DESC
+)
+WHERE ROWNUM <= 5;
+--11)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_DEPT_EMP_REPORT_V" ("DEPARTMENT_NAME", "DEPARTMENT_ID", "EMPLOYEE_ID", "EMPLOYEE_NAME", "EMAIL", "PHONE_NO", "HIRE_DATE", "SALARY", "JOB_TITLE", "MANAGER_NAME", "DEPT_STATUS", "EMP_STATUS") AS 
+  SELECT 
+    d.department_name,
+    d.department_id,
+    e.employee_id,
+    e.first_name || ' ' || e.last_name AS employee_name,
+    e.email,
+    e.phone_no,
+    e.hire_date,
+    e.salary,
+    j.job_title,
+    m.first_name || ' ' || m.last_name AS manager_name,
+    d.status AS dept_status,
+    e.status AS emp_status
+FROM sufioun_departments d
+LEFT JOIN sufioun_employees e ON d.department_id = e.department_id
+LEFT JOIN sufioun_jobs j ON e.job_id = j.job_id
+LEFT JOIN sufioun_employees m ON e.manager_id = m.employee_id
+WHERE d.status = 1 
+  AND (e.status = 1 OR e.status IS NULL) -- Only fetch active departments and active employees
+ORDER BY d.department_name, e.first_name;
+--12)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_REORDER_REPORT_V" ("PRODUCT_CODE", "PRODUCT_NAME", "CATEGORY_NAME", "SUPPLIER_NAME", "QUANTITY", "STOCK_STATUS") AS 
+  SELECT
+  product_code,
+  product_name,
+  category_name,
+  supplier_name,
+  quantity,
+  CASE
+    WHEN quantity = 0 THEN 'OUT OF STOCK'
+    WHEN quantity < 10 THEN 'CRITICAL'
+    WHEN quantity < 20 THEN 'LOW'
+    ELSE 'OK'
+  END AS stock_status
+FROM sufioun_stock_position_v
+WHERE quantity < 20
+ORDER BY quantity ASC;
+--13)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_SALES_INVOICES_REPORT_V" ("INVOICE_ID", "INVOICE_DATE", "CUSTOMER_ID", "CUSTOMER_NAME", "SALES_BY", "SALES_BY_NAME", "TOTAL_AMOUNT", "VAT", "DISCOUNT", "GRAND_TOTAL") AS 
+  SELECT
+  s.invoice_id,
+  s.invoice_date,
+  s.customer_id,
+  c.customer_name,
+  s.sales_by,
+  e.first_name || ' ' || e.last_name AS sales_by_name,
+  s.total_amount,
+  s.vat,
+  s.discount,
+  s.grand_total
+FROM sufioun_sales_master s
+LEFT JOIN sufioun_customers c ON c.customer_id = s.customer_id
+LEFT JOIN sufioun_employees e ON e.employee_id = s.sales_by
+WHERE s.status = 1;
+--14)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_SALES_MONTHLY_SUMMARY_V" ("MONTH_START", "MONTH_LABEL", "INVOICES", "TOTAL_SALES", "TOTAL_VAT", "TOTAL_DISCOUNT") AS 
+  SELECT
+  TRUNC(invoice_date,'MM') AS month_start,
+  TO_CHAR(TRUNC(invoice_date,'MM'),'Mon YYYY') AS month_label,
+  COUNT(*) AS invoices,
+  SUM(NVL(grand_total,0)) AS total_sales,
+  SUM(NVL(vat,0)) AS total_vat,
+  SUM(NVL(discount,0)) AS total_discount
+FROM sufioun_sales_master
+WHERE status = 1
+GROUP BY TRUNC(invoice_date,'MM')
+ORDER BY TRUNC(invoice_date,'MM') DESC;
+--15)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_SERVICE_JOBS_REPORT_V" ("SERVICE_ID", "SERVICE_DATE", "CUSTOMER_ID", "CUSTOMER_NAME", "SERVICE_BY", "SERVICE_BY_NAME", "INVOICE_ID", "WARRANTY_APPLICABLE", "SERVICE_CHARGE_TOTAL", "TOTAL_PRICE", "VAT", "GRAND_TOTAL") AS 
+  SELECT
+  sm.service_id,
+  sm.service_date,
+  sm.customer_id,
+  c.customer_name,
+  sm.service_by,
+  e.first_name || ' ' || e.last_name AS service_by_name,
+  sm.invoice_id,
+  sm.warranty_applicable,
+  sm.service_charge_total,
+  sm.total_price,
+  sm.vat,
+  sm.grand_total
+FROM sufioun_service_master sm
+LEFT JOIN sufioun_customers c ON c.customer_id = sm.customer_id
+LEFT JOIN sufioun_employees e ON e.employee_id = sm.service_by
+WHERE sm.status = 1;
+--16)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_STOCK_POSITION_V" ("PRODUCT_ID", "PRODUCT_CODE", "PRODUCT_NAME", "CATEGORY_NAME", "SUPPLIER_NAME", "QUANTITY", "MRP", "PURCHASE_PRICE", "STOCK_VALUE_COST", "STOCK_VALUE_MRP") AS 
+  SELECT
+  p.product_id,
+  p.product_code,
+  p.product_name,
+  cat.product_cat_name AS category_name,
+  sup.supplier_name,
+  NVL(s.quantity,0) AS quantity,
+  p.mrp,
+  p.purchase_price,
+  (NVL(s.quantity,0) * NVL(p.purchase_price,0)) AS stock_value_cost,
+  (NVL(s.quantity,0) * NVL(p.mrp,0)) AS stock_value_mrp
+FROM sufioun_products p
+LEFT JOIN sufioun_stock s ON s.product_id = p.product_id
+LEFT JOIN sufioun_product_categories cat ON cat.product_cat_id = p.category_id
+LEFT JOIN sufioun_suppliers sup ON sup.supplier_id = p.supplier_id
+WHERE NVL(p.status,1) = 1;
+--17)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_SUPPLIER_PAYABLES_REPORT_V" ("SUPPLIER_ID", "SUPPLIER_NAME", "PHONE_NO", "PURCHASE_TOTAL", "PAY_TOTAL", "DUE", "DUE_RISK") AS 
+  SELECT
+  supplier_id,
+  supplier_name,
+  phone_no,
+  purchase_total,
+  pay_total,
+  NVL(due,0) AS due,
+  CASE
+    WHEN NVL(due,0) = 0 THEN 'CLEAR'
+    WHEN NVL(due,0) < 5000 THEN 'LOW'
+    WHEN NVL(due,0) < 50000 THEN 'MEDIUM'
+    ELSE 'HIGH'
+  END AS due_risk
+FROM sufioun_suppliers
+WHERE status = 1;
+--18)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_V_EMP_DIR" ("EMPLOYEE_ID", "EMPLOYEE_NAME", "EMAIL", "PHONE_NO", "SALARY", "STATUS", "DEPARTMENT_ID", "JOB_TITLE", "DEPARTMENT_NAME", "STATUS_LABEL", "STATUS_COLOR", "IMG_URL", "CV_URL") AS 
+  select
+  e.employee_id,
+  e.first_name||' '||e.last_name as employee_name,
+  e.email,
+  e.phone_no,
+  e.salary,
+  e.status,
+  e.department_id,
+  j.job_title,
+  d.department_name,
+
+  case to_char(e.status)
+    when '1' then 'ACTIVE'
+    when '0' then 'INACTIVE'
+    else 'UNKNOWN'
+  end status_label,
+
+  case to_char(e.status)
+    when '1' then '#28a745'
+    when '0' then '#dc3545'
+    else '#17a2b8'
+  end status_color,
+
+  case
+    when dbms_lob.getlength(e.photo) > 0 then
+      'f?p='||v('APP_ID')||':0:'||v('APP_SESSION')||':APPLICATION_PROCESS=EMP_PHOTO:::&x01='||e.employee_id
+    else
+      '#APP_FILES#avatar-default.png'
+  end img_url,
+
+  apex_page.get_url(
+    p_page   => 15,
+    p_items  => 'P15_EMPLOYEE_ID',
+    p_values => e.employee_id
+  ) cv_url
+
+from sufioun_employees e
+left join sufioun_jobs j on j.job_id = e.job_id
+left join sufioun_departments d on d.department_id = e.department_id;
+--19)
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "SUFIOUN_V_EMP_DIRECTORY" ("EMPLOYEE_ID", "FIRST_NAME", "LAST_NAME", "EMPLOYEE_NAME", "EMAIL", "PHONE_NO", "HIRE_DATE", "SALARY", "STATUS", "DEPARTMENT_ID", "JOB_ID", "JOB_TITLE", "DEPARTMENT_NAME", "STATUS_LABEL", "STATUS_COLOR", "IMG_URL", "CV_URL") AS 
+  select
+  e.employee_id,
+  e.first_name,
+  e.last_name,
+  e.first_name||' '||e.last_name as employee_name,
+  e.email,
+  e.phone_no,
+  e.hire_date,
+  e.salary,
+  e.status,
+  e.department_id,
+  e.job_id,
+
+  j.job_title,
+  d.department_name,
+
+  /* for display */
+  case to_char(e.status)
+    when '1' then 'ACTIVE'
+    when '0' then 'INACTIVE'
+    else 'UNKNOWN'
+  end as status_label,
+
+  case to_char(e.status)
+    when '1' then '#28a745'
+    when '0' then '#dc3545'
+    else '#17a2b8'
+  end as status_color,
+
+  /* photo url (EMP_PHOTO process) */
+  case
+    when dbms_lob.getlength(e.photo) > 0 then
+      'f?p='||v('APP_ID')||':0:'||v('APP_SESSION')||
+      ':APPLICATION_PROCESS=EMP_PHOTO:::&x01='||e.employee_id
+    else
+      '#APP_FILES#avatar-default.png'
+  end as img_url,
+
+  /* CV link */
+  apex_page.get_url(
+    p_page   => 15,
+    p_items  => 'P15_EMPLOYEE_ID',
+    p_values => e.employee_id
+  ) as cv_url
+
+from sufioun_employees e
+left join sufioun_jobs j on j.job_id = e.job_id
+left join sufioun_departments d on d.department_id = e.department_id;
+
+-- 001_schema_extensions.sql
+
+CREATE TABLE sufioun_app_roles (
+  role_id        VARCHAR2(50) PRIMARY KEY,
+  role_code      VARCHAR2(50) UNIQUE NOT NULL,
+  role_name      VARCHAR2(150) NOT NULL,
+  status         NUMBER(1) DEFAULT 1 CHECK (status IN (0,1)),
+  cre_by         VARCHAR2(100),
+  cre_dt         DATE,
+  upd_by         VARCHAR2(100),
+  upd_dt         DATE
+);
+
+CREATE TABLE sufioun_user_roles (
+  user_role_id   VARCHAR2(50) PRIMARY KEY,
+  user_id        VARCHAR2(50) NOT NULL REFERENCES sufioun_com_users(user_id) ON DELETE CASCADE,
+  role_id        VARCHAR2(50) NOT NULL REFERENCES sufioun_app_roles(role_id),
+  is_default     NUMBER(1) DEFAULT 0 CHECK (is_default IN (0,1)),
+  status         NUMBER(1) DEFAULT 1 CHECK (status IN (0,1)),
+  cre_by         VARCHAR2(100),
+  cre_dt         DATE,
+  upd_by         VARCHAR2(100),
+  upd_dt         DATE,
+  CONSTRAINT sufioun_uk_user_role UNIQUE (user_id, role_id)
+);
+
+CREATE TABLE sufioun_oauth_identities (
+  identity_id        VARCHAR2(50) PRIMARY KEY,
+  user_id            VARCHAR2(50) NOT NULL REFERENCES sufioun_com_users(user_id) ON DELETE CASCADE,
+  provider_code      VARCHAR2(30) NOT NULL CHECK (provider_code IN ('GOOGLE','MICROSOFT','FACEBOOK')),
+  provider_subject   VARCHAR2(255) NOT NULL,
+  email              VARCHAR2(200) NOT NULL,
+  email_verified     CHAR(1) DEFAULT 'Y' CHECK (email_verified IN ('Y','N')),
+  last_login_dt      DATE,
+  status             NUMBER(1) DEFAULT 1 CHECK (status IN (0,1)),
+  cre_by             VARCHAR2(100),
+  cre_dt             DATE,
+  upd_by             VARCHAR2(100),
+  upd_dt             DATE,
+  CONSTRAINT sufioun_uk_oauth_sub UNIQUE (provider_code, provider_subject)
+);
+
+ALTER TABLE sufioun_com_users ADD (
+  email VARCHAR2(200) UNIQUE
+);
+
+CREATE TABLE sufioun_customer_receipts (
+  receipt_id        VARCHAR2(50) PRIMARY KEY,
+  receipt_no        VARCHAR2(50) UNIQUE,
+  receipt_date      DATE DEFAULT SYSDATE NOT NULL,
+  invoice_id        VARCHAR2(50) NOT NULL REFERENCES sufioun_sales_master(invoice_id),
+  customer_id       VARCHAR2(50) NOT NULL REFERENCES sufioun_customers(customer_id),
+  amount            NUMBER(20,4) NOT NULL CHECK (amount > 0),
+  payment_method    VARCHAR2(30) NOT NULL CHECK (payment_method IN ('CASH','ONLINE','BANK','CHEQUE')),
+  reference_no      VARCHAR2(100),
+  notes             VARCHAR2(1000),
+  received_by       VARCHAR2(50) REFERENCES sufioun_employees(employee_id),
+  status            NUMBER(1) DEFAULT 1 CHECK (status IN (0,1)),
+  cre_by            VARCHAR2(100),
+  cre_dt            DATE,
+  upd_by            VARCHAR2(100),
+  upd_dt            DATE
+);
+
+CREATE TABLE sufioun_stock_adjust_master (
+  adjust_id         VARCHAR2(50) PRIMARY KEY,
+  adjust_no         VARCHAR2(50) UNIQUE,
+  request_date      DATE DEFAULT SYSDATE,
+  requested_by      VARCHAR2(50) REFERENCES sufioun_employees(employee_id),
+  reason            VARCHAR2(1000),
+  adjust_status     VARCHAR2(20) DEFAULT 'REQUESTED'
+                    CHECK (adjust_status IN ('REQUESTED','APPROVED','POSTED','REJECTED')),
+  approved_by       VARCHAR2(50) REFERENCES sufioun_employees(employee_id),
+  approved_date     DATE,
+  posted_date       DATE,
+  status            NUMBER(1) DEFAULT 1 CHECK (status IN (0,1)),
+  cre_by            VARCHAR2(100),
+  cre_dt            DATE,
+  upd_by            VARCHAR2(100),
+  upd_dt            DATE
+);
+
+CREATE TABLE sufioun_stock_adjust_detail (
+  adjust_det_id     VARCHAR2(50) PRIMARY KEY,
+  adjust_id         VARCHAR2(50) NOT NULL REFERENCES sufioun_stock_adjust_master(adjust_id) ON DELETE CASCADE,
+  product_id        VARCHAR2(50) NOT NULL REFERENCES sufioun_products(product_id),
+  current_qty       NUMBER(10),
+  adjust_qty        NUMBER(10) NOT NULL,
+  line_note         VARCHAR2(500)
+);
+
+CREATE TABLE sufioun_app_settings (
+  setting_key       VARCHAR2(100) PRIMARY KEY,
+  setting_value     VARCHAR2(4000),
+  setting_group     VARCHAR2(100),
+  status            NUMBER(1) DEFAULT 1 CHECK (status IN (0,1)),
+  upd_by            VARCHAR2(100),
+  upd_dt            DATE
+);
+
+CREATE TABLE sufioun_audit_log (
+  log_id            VARCHAR2(50) PRIMARY KEY,
+  log_ts            TIMESTAMP DEFAULT SYSTIMESTAMP,
+  module_name       VARCHAR2(100),
+  action_name       VARCHAR2(100),
+  user_id           VARCHAR2(50),
+  role_code         VARCHAR2(50),
+  entity_name       VARCHAR2(100),
+  entity_id         VARCHAR2(100),
+  severity          VARCHAR2(20) CHECK (severity IN ('INFO','WARN','ERROR')),
+  -- APEX Image Columns
+  image_name        VARCHAR2(500),
+  image_mime_type   VARCHAR2(100),
+  image_blob        BLOB,
+  --
+  message           VARCHAR2(4000)
+);
+
+CREATE INDEX idx_usr_roles_user ON sufioun_user_roles(user_id);
+CREATE INDEX idx_usr_roles_role ON sufioun_user_roles(role_id);
+CREATE INDEX idx_oauth_email ON sufioun_oauth_identities(email);
+CREATE INDEX idx_receipts_invoice ON sufioun_customer_receipts(invoice_id);
+CREATE INDEX idx_receipts_customer ON sufioun_customer_receipts(customer_id);
+CREATE INDEX idx_stock_adj_status ON sufioun_stock_adjust_master(adjust_status);
+CREATE INDEX idx_audit_ts ON sufioun_audit_log(log_ts);
+
+CREATE SEQUENCE sufioun_oauth_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE sufioun_user_role_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE sufioun_receipt_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE sufioun_stock_adj_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE sufioun_stock_adj_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE sufioun_audit_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_oauth_bi
+BEFORE INSERT OR UPDATE ON sufioun_oauth_identities
+FOR EACH ROW
+BEGIN
+  IF INSERTING AND :NEW.identity_id IS NULL THEN
+    :NEW.identity_id := 'OID' || TO_CHAR(sufioun_oauth_seq.NEXTVAL);
+  END IF;
+  IF INSERTING THEN
+    IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+    IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+  ELSE
+    :NEW.upd_by := USER;
+    :NEW.upd_dt := SYSDATE;
+  END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_trg_user_roles_bi
+BEFORE INSERT OR UPDATE ON sufioun_user_roles
+FOR EACH ROW
+BEGIN
+  IF INSERTING AND :NEW.user_role_id IS NULL THEN
+    :NEW.user_role_id := 'URL' || TO_CHAR(sufioun_user_role_seq.NEXTVAL);
+  END IF;
+  IF INSERTING THEN
+    IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+    IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+  ELSE
+    :NEW.upd_by := USER;
+    :NEW.upd_dt := SYSDATE;
+  END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_trg_receipt_bi
+BEFORE INSERT OR UPDATE ON sufioun_customer_receipts
+FOR EACH ROW
+BEGIN
+  IF INSERTING AND :NEW.receipt_id IS NULL THEN
+    :NEW.receipt_id := 'RCT' || TO_CHAR(sufioun_receipt_seq.NEXTVAL);
+  END IF;
+  IF INSERTING AND :NEW.receipt_no IS NULL THEN
+    :NEW.receipt_no := 'RCT-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-' || LPAD(sufioun_receipt_seq.CURRVAL, 6, '0');
+  END IF;
+  IF INSERTING THEN
+    IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+    IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+  ELSE
+    :NEW.upd_by := USER;
+    :NEW.upd_dt := SYSDATE;
+  END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_trg_stock_adj_master_bi
+BEFORE INSERT OR UPDATE ON sufioun_stock_adjust_master
+FOR EACH ROW
+BEGIN
+  IF INSERTING AND :NEW.adjust_id IS NULL THEN
+    :NEW.adjust_id := 'SAM' || TO_CHAR(sufioun_stock_adj_seq.NEXTVAL);
+  END IF;
+  IF INSERTING AND :NEW.adjust_no IS NULL THEN
+    :NEW.adjust_no := 'ADJ-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-' || LPAD(sufioun_stock_adj_seq.CURRVAL, 6, '0');
+  END IF;
+  IF INSERTING THEN
+    IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+    IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+  ELSE
+    :NEW.upd_by := USER;
+    :NEW.upd_dt := SYSDATE;
+  END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_trg_stock_adj_detail_bi
+BEFORE INSERT ON sufioun_stock_adjust_detail
+FOR EACH ROW
+BEGIN
+  IF INSERTING AND :NEW.adjust_det_id IS NULL THEN
+    :NEW.adjust_det_id := 'SAD' || TO_CHAR(sufioun_stock_adj_det_seq.NEXTVAL);
+  END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_trg_sales_receipt_sync
+AFTER INSERT OR UPDATE OR DELETE ON sufioun_customer_receipts
+FOR EACH ROW
+DECLARE
+  v_invoice_id sufioun_sales_master.invoice_id%TYPE;
+BEGIN
+  v_invoice_id := NVL(:NEW.invoice_id, :OLD.invoice_id);
+
+  UPDATE sufioun_sales_master m
+  SET m.payment_status =
+      CASE
+        WHEN NVL((SELECT SUM(r.amount)
+                  FROM sufioun_customer_receipts r
+                  WHERE r.invoice_id = m.invoice_id), 0) <= 0
+        THEN 'PENDING'
+        WHEN NVL((SELECT SUM(r.amount)
+                  FROM sufioun_customer_receipts r
+                  WHERE r.invoice_id = m.invoice_id), 0) >= NVL(m.grand_total, 0)
+        THEN 'PAID'
+        ELSE 'PARTIAL'
+      END,
+      m.upd_by = USER,
+      m.upd_dt = SYSDATE
+  WHERE m.invoice_id = v_invoice_id;
+END;
+/
+-- 002_seed_roles_and_mappings.sql
+-- Seed required application roles and map current users.
+
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
+VALUES ('ROL-001', 'ADMIN', 'Admin', 1, USER, SYSDATE);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
+VALUES ('ROL-002', 'SALES_MANAGER', 'Sales Manager', 1, USER, SYSDATE);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
+VALUES ('ROL-003', 'SALES_REP', 'Sales Representative', 1, USER, SYSDATE);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
+VALUES ('ROL-004', 'SERVICE_MANAGER', 'Service Manager', 1, USER, SYSDATE);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
+VALUES ('ROL-005', 'TECHNICIAN', 'Technician', 1, USER, SYSDATE);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
+VALUES ('ROL-006', 'INVENTORY_MANAGER', 'Inventory Manager', 1, USER, SYSDATE);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
+VALUES ('ROL-007', 'STOREKEEPER', 'Storekeeper', 1, USER, SYSDATE);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
+VALUES ('ROL-008', 'CRM_AGENT', 'CRM/Support Agent', 1, USER, SYSDATE);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
+VALUES ('ROL-009', 'CUSTOMER', 'Customer', 1, USER, SYSDATE);
+
+-- Backfill email for existing users from employee records where available.
+UPDATE sufioun_com_users u
+SET email = (
+  SELECT LOWER(e.email)
+  FROM sufioun_employees e
+  WHERE e.employee_id = u.employee_id
+)
+WHERE u.employee_id IS NOT NULL
+  AND u.email IS NULL
+  AND EXISTS (
+    SELECT 1 FROM sufioun_employees e2 WHERE e2.employee_id = u.employee_id AND e2.email IS NOT NULL
+  );
+
+-- Map legacy single-role records into new role model.
+INSERT INTO sufioun_user_roles (user_id, role_id, is_default, status, cre_by, cre_dt)
+SELECT u.user_id,
+       CASE u.role
+         WHEN 'admin' THEN 'ROL-001'
+         WHEN 'manager' THEN 'ROL-002'
+         WHEN 'technician' THEN 'ROL-005'
+         WHEN 'cashier' THEN 'ROL-003'
+         ELSE 'ROL-003'
+       END,
+       1,
+       1,
+       USER,
+       SYSDATE
+FROM sufioun_com_users u
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM sufioun_user_roles ur
+  WHERE ur.user_id = u.user_id
+);
+
+-- Optional second role grants to satisfy multi-role support for managers.
+INSERT INTO sufioun_user_roles (user_id, role_id, is_default, status, cre_by, cre_dt)
+SELECT u.user_id, 'ROL-004', 0, 1, USER, SYSDATE
+FROM sufioun_com_users u
+WHERE u.role = 'manager'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM sufioun_user_roles ur
+    WHERE ur.user_id = u.user_id
+      AND ur.role_id = 'ROL-004'
+  );
+
+INSERT INTO sufioun_user_roles (user_id, role_id, is_default, status, cre_by, cre_dt)
+SELECT u.user_id, 'ROL-006', 0, 1, USER, SYSDATE
+FROM sufioun_com_users u
+WHERE u.role IN ('manager', 'user')
+  AND NOT EXISTS (
+    SELECT 1
+    FROM sufioun_user_roles ur
+    WHERE ur.user_id = u.user_id
+      AND ur.role_id = 'ROL-006'
+  );
+
+COMMIT;
+
+-- 003_security_context_package.sql
+-- Session role and authorization helper package for Oracle APEX.
+
+CREATE OR REPLACE PACKAGE sufioun_app_security AS
+  FUNCTION get_user_id_by_name(p_user_name IN VARCHAR2) RETURN VARCHAR2;
+  FUNCTION user_has_role(p_user_id IN VARCHAR2, p_role_code IN VARCHAR2) RETURN NUMBER;
+  FUNCTION can_view_sales(p_sales_by IN VARCHAR2, p_customer_id IN VARCHAR2, p_emp_id IN VARCHAR2, p_cust_id IN VARCHAR2, p_active_role IN VARCHAR2) RETURN NUMBER;
+  FUNCTION can_view_service(p_service_by IN VARCHAR2, p_customer_id IN VARCHAR2, p_emp_id IN VARCHAR2, p_cust_id IN VARCHAR2, p_active_role IN VARCHAR2) RETURN NUMBER;
+END sufioun_app_security;
+/
+
+CREATE OR REPLACE PACKAGE BODY sufioun_app_security AS
+
+  FUNCTION get_user_id_by_name(p_user_name IN VARCHAR2) RETURN VARCHAR2 IS
+    v_user_id sufioun_com_users.user_id%TYPE;
+  BEGIN
+    SELECT user_id
+    INTO v_user_id
+    FROM sufioun_com_users
+    WHERE UPPER(user_name) = UPPER(p_user_name)
+      AND status = 1;
+    RETURN v_user_id;
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RETURN NULL;
+  END;
+
+  FUNCTION user_has_role(p_user_id IN VARCHAR2, p_role_code IN VARCHAR2) RETURN NUMBER IS
+    v_count NUMBER;
+  BEGIN
+    SELECT COUNT(*)
+    INTO v_count
+    FROM sufioun_user_roles ur
+    JOIN sufioun_app_roles ar ON ar.role_id = ur.role_id
+    WHERE ur.user_id = p_user_id
+      AND ur.status = 1
+      AND ar.status = 1
+      AND ar.role_code = p_role_code;
+
+    RETURN CASE WHEN v_count > 0 THEN 1 ELSE 0 END;
+  END;
+
+  FUNCTION can_view_sales(
+    p_sales_by    IN VARCHAR2,
+    p_customer_id IN VARCHAR2,
+    p_emp_id      IN VARCHAR2,
+    p_cust_id     IN VARCHAR2,
+    p_active_role IN VARCHAR2
+  ) RETURN NUMBER IS
+  BEGIN
+    IF p_active_role IN ('ADMIN','SALES_MANAGER') THEN
+      RETURN 1;
+    ELSIF p_active_role = 'SALES_REP' AND p_sales_by = p_emp_id THEN
+      RETURN 1;
+    ELSIF p_active_role = 'CUSTOMER' AND p_customer_id = p_cust_id THEN
+      RETURN 1;
+    ELSE
+      RETURN 0;
+    END IF;
+  END;
+
+  FUNCTION can_view_service(
+    p_service_by  IN VARCHAR2,
+    p_customer_id IN VARCHAR2,
+    p_emp_id      IN VARCHAR2,
+    p_cust_id     IN VARCHAR2,
+    p_active_role IN VARCHAR2
+  ) RETURN NUMBER IS
+  BEGIN
+    IF p_active_role IN ('ADMIN','SERVICE_MANAGER') THEN
+      RETURN 1;
+    ELSIF p_active_role = 'TECHNICIAN' AND p_service_by = p_emp_id THEN
+      RETURN 1;
+    ELSIF p_active_role = 'CUSTOMER' AND p_customer_id = p_cust_id THEN
+      RETURN 1;
+    ELSE
+      RETURN 0;
+    END IF;
+  END;
+
+END sufioun_app_security;
+/
+-- 004_row_level_security_views.sql
+-- Role-aware views to simplify APEX report SQL.
+-- Assumes APEX application items:
+--   G_ACTIVE_ROLE, G_EMPLOYEE_ID, G_CUSTOMER_ID
+
+CREATE OR REPLACE VIEW sufioun_v_sales_secure AS
+SELECT m.*
+FROM sufioun_sales_master m
+WHERE sufioun_app_security.can_view_sales(
+        m.sales_by,
+        m.customer_id,
+        V('G_EMPLOYEE_ID'),
+        V('G_CUSTOMER_ID'),
+        V('G_ACTIVE_ROLE')
+      ) = 1;
+/
+
+CREATE OR REPLACE VIEW sufioun_v_service_secure AS
+SELECT s.*
+FROM sufioun_service_master s
+WHERE sufioun_app_security.can_view_service(
+        s.service_by,
+        s.customer_id,
+        V('G_EMPLOYEE_ID'),
+        V('G_CUSTOMER_ID'),
+        V('G_ACTIVE_ROLE')
+      ) = 1;
+/
+
+CREATE OR REPLACE VIEW sufioun_v_receipts_secure AS
+SELECT r.*
+FROM sufioun_customer_receipts r
+WHERE (
+  V('G_ACTIVE_ROLE') IN ('ADMIN','SALES_MANAGER')
+  OR (V('G_ACTIVE_ROLE') = 'SALES_REP' AND EXISTS (
+      SELECT 1
+      FROM sufioun_sales_master m
+      WHERE m.invoice_id = r.invoice_id
+        AND m.sales_by = V('G_EMPLOYEE_ID')
+  ))
+  OR (V('G_ACTIVE_ROLE') = 'CUSTOMER' AND r.customer_id = V('G_CUSTOMER_ID'))
+);
+/
+
+CREATE OR REPLACE VIEW sufioun_v_stock_secure AS
+SELECT s.*
+FROM sufioun_stock s
+WHERE (
+  V('G_ACTIVE_ROLE') IN ('ADMIN','INVENTORY_MANAGER','STOREKEEPER')
+);
+/
+-- 005_oauth_post_auth_process.sql
+-- Post-authentication process helper package for APEX social sign-in.
+-- Identity key is email and users exist in sufioun_com_users.
+
+CREATE OR REPLACE PACKAGE sufioun_auth_map AS
+  PROCEDURE map_oauth_login(
+    p_provider_code    IN VARCHAR2,
+    p_provider_subject IN VARCHAR2,
+    p_email            IN VARCHAR2
+  );
+END sufioun_auth_map;
+/
+
+CREATE OR REPLACE PACKAGE BODY sufioun_auth_map AS
+  PROCEDURE map_oauth_login(
+    p_provider_code    IN VARCHAR2,
+    p_provider_subject IN VARCHAR2,
+    p_email            IN VARCHAR2
+  ) IS
+    v_user_id        sufioun_com_users.user_id%TYPE;
+    v_employee_id    sufioun_com_users.employee_id%TYPE;
+    v_customer_id    sufioun_customers.customer_id%TYPE;
+    v_default_role   sufioun_app_roles.role_code%TYPE;
+    v_exists         NUMBER;
+  BEGIN
+    SELECT u.user_id, u.employee_id
+    INTO v_user_id, v_employee_id
+    FROM sufioun_com_users u
+    WHERE UPPER(u.email) = UPPER(p_email)
+      AND u.status = 1;
+
+    BEGIN
+      SELECT customer_id
+      INTO v_customer_id
+      FROM sufioun_customers
+      WHERE UPPER(email) = UPPER(p_email)
+        AND status = 1;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        v_customer_id := NULL;
+    END;
+
+    SELECT COUNT(*)
+    INTO v_exists
+    FROM sufioun_oauth_identities
+    WHERE provider_code = UPPER(p_provider_code)
+      AND provider_subject = p_provider_subject;
+
+    IF v_exists = 0 THEN
+      INSERT INTO sufioun_oauth_identities (
+        identity_id,
+        user_id,
+        provider_code,
+        provider_subject,
+        email,
+        email_verified,
+        last_login_dt,
+        status,
+        cre_by,
+        cre_dt
+      ) VALUES (
+        'OID' || TO_CHAR(sufioun_oauth_seq.NEXTVAL),
+        v_user_id,
+        UPPER(p_provider_code),
+        p_provider_subject,
+        LOWER(p_email),
+        'Y',
+        SYSDATE,
+        1,
+        USER,
+        SYSDATE
+      );
+    ELSE
+      UPDATE sufioun_oauth_identities
+      SET user_id = v_user_id,
+          email = LOWER(p_email),
+          last_login_dt = SYSDATE,
+          upd_by = USER,
+          upd_dt = SYSDATE
+      WHERE provider_code = UPPER(p_provider_code)
+        AND provider_subject = p_provider_subject;
+    END IF;
+
+    UPDATE sufioun_com_users
+    SET last_login = SYSDATE,
+        is_online = 1,
+        upd_by = USER,
+        upd_dt = SYSDATE
+    WHERE user_id = v_user_id;
+
+    SELECT ar.role_code
+    INTO v_default_role
+    FROM sufioun_user_roles ur
+    JOIN sufioun_app_roles ar ON ar.role_id = ur.role_id
+    WHERE ur.user_id = v_user_id
+      AND ur.status = 1
+      AND ar.status = 1
+      AND ur.is_default = 1
+      AND ROWNUM = 1;
+
+    apex_util.set_session_state('G_USER_ID', v_user_id);
+    apex_util.set_session_state('G_EMPLOYEE_ID', v_employee_id);
+    apex_util.set_session_state('G_CUSTOMER_ID', v_customer_id);
+    apex_util.set_session_state('G_ACTIVE_ROLE', v_default_role);
+    apex_util.set_session_state('G_IS_CUSTOMER', CASE WHEN v_customer_id IS NULL THEN 'N' ELSE 'Y' END);
+
+    INSERT INTO sufioun_audit_log (
+      log_id, log_ts, module_name, action_name, user_id, role_code, entity_name, entity_id, severity, message
+    ) VALUES (
+      'LOG' || TO_CHAR(sufioun_audit_seq.NEXTVAL),
+      SYSTIMESTAMP,
+      'AUTH',
+      'OAUTH_LOGIN',
+      v_user_id,
+      v_default_role,
+      'OAUTH',
+      p_provider_subject,
+      'INFO',
+      'OAuth login mapped by email'
+    );
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RAISE_APPLICATION_ERROR(-20001, 'No active application user found for email: ' || p_email);
+  END map_oauth_login;
+END sufioun_auth_map;
+/
+
+-- Example usage in APEX post-authentication procedure:
+-- BEGIN
+--   sufioun_auth_map.map_oauth_login(
+--     p_provider_code    => :APEX$OAUTH_PROVIDER,
+--     p_provider_subject => :APEX$OAUTH_SUB,
+--     p_email            => :APEX$OAUTH_EMAIL
+--   );
+-- END;
+-- /
+
+

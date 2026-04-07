@@ -7,6 +7,7 @@ Run scripts in this exact order:
 3. `003_security_context_package.sql`
 4. `004_row_level_security_views.sql`
 5. `005_oauth_post_auth_process.sql`
+6. `006_integrity_checks.sql`
 
 Notes:
 - Execute as the schema owner containing `SUFIOUN_%` objects.
