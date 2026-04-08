@@ -400,17 +400,286 @@ List mode is activated by body class `empListMode` set by JS:
   .empCardsWrap{ grid-template-columns: 1fr; }
 }
 ```
+### 6.8 TOTAL_CSS (JUST COPY-PASTE)
+/* ===== Page background polish ===== */
+.t-Body-content{
+  background: linear-gradient(180deg, #f7f9fc 0%, #ffffff 55%);
+}
 
----
+/* ===== Hero toolbar ===== */
+.empHero{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:16px;
+  padding: 18px 18px;
+  border: 1px solid #e6eaf2;
+  border-radius: 16px;
+  background:
+    radial-gradient(900px 280px at 20% 10%, rgba(37,99,235,.16), transparent 60%),
+    radial-gradient(900px 280px at 85% 10%, rgba(16,185,129,.10), transparent 55%),
+    #ffffff;
+  box-shadow: 0 14px 30px rgba(15,23,42,.06);
+  margin: 8px 0 16px;
+}
 
-## 7) Page processes / components used
+.empHero__titleRow{ display:flex; align-items:center; gap:10px; }
+.empHero__title{
+  margin:0;
+  font-size:22px;
+  font-weight:900;
+  letter-spacing:.2px;
+  color:#0f172a;
+}
+.empHero__pill{
+  display:inline-flex;
+  align-items:center;
+  height:22px;
+  padding:0 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  color:#1e40af;
+  background:#e8f0ff;
+  border:1px solid #d7e5ff;
+}
+.empHero__sub{
+  margin-top:4px;
+  font-size:12px;
+  color:#64748b;
+}
+
+.empHero__quick{
+  margin-top:12px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.empStat{
+  min-width: 140px;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid #edf1f7;
+  background:#ffffff;
+}
+.empStat__label{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.10em;
+  color:#64748b;
+}
+.empStat__value{
+  margin-top:3px;
+  font-size:18px;
+  font-weight:900;
+  color:#0f172a;
+}
+
+.empViewBtns{ display:flex; gap:8px; }
+
+/* ===== IR chrome cleanup ===== */
+#emp_ir .t-Report-report thead{ display:none !important; }
+#emp_ir .t-Report-report table,
+#emp_ir .t-Report-report tbody,
+#emp_ir .t-Report-report tr,
+#emp_ir .t-Report-report td{ display:block; }
+#emp_ir .t-Report-report td{ padding:0; border:0; }
+#emp_ir .t-Report-report tr{ margin:0; }
+
+/* If you want to hide IR toolbar (search/actions/create), uncomment:
+#emp_ir .t-IRR-controls,
+#emp_ir .t-IRR-toolBar{ display:none !important; }
+*/
+
+/* ===== Grid wrapper ===== */
+.empCardsWrap{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(310px, 1fr));
+  gap: 14px;
+  margin-top: 10px;
+}
+
+/* ===== Card ===== */
+.empCard{
+  display:grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #e7e9ee;
+  border-radius: 16px;
+  background:#fff;
+  box-shadow: 0 16px 34px rgba(15,23,42,.07);
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.empCard:hover{
+  transform: translateY(-1px);
+  border-color: #dbe3f2;
+  box-shadow: 0 18px 44px rgba(15,23,42,.10);
+}
+.empCard:focus-within{
+  outline: 3px solid rgba(37,99,235,.20);
+  outline-offset: 2px;
+}
+
+/* Avatar */
+.empCard__avatar{ line-height:0; }
+.empCard__avatarLink{
+  display:inline-block;
+  border-radius:18px;
+  overflow:hidden;
+  line-height:0;
+}
+.empCard__avatarLink:focus{
+  outline:3px solid rgba(37,99,235,.25);
+  outline-offset:3px;
+}
+.empCard__avatar img{
+  width:64px;
+  height:64px;
+  border-radius:18px;
+  object-fit:cover;
+  display:block;
+  border:1px solid #eef0f4;
+  background:#f8fafc;
+  transition: transform .12s ease;
+}
+.empCard__avatarLink:hover img{ transform: scale(1.03); }
+
+/* Name + meta */
+.empCard__name{
+  font-size:16px;
+  font-weight:950;
+  color:#0b1220;
+  text-decoration:none;
+}
+.empCard__name:hover{ text-decoration:underline; }
+
+.empCard__meta{
+  margin-top:3px;
+  font-size:12px;
+  color:#475569;
+}
+
+/* Chips */
+.empCard__chips{
+  margin-top:10px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.empChip{
+  font-size:12px;
+  padding:7px 10px;
+  border-radius:999px;
+  background:#f1f5f9;
+  border:1px solid #e2e8f0;
+  color:#0f172a;
+}
+
+/* Side panel */
+.empCard__side{
+  text-align:right;
+  min-width: 190px;
+}
+.empCard__salary{
+  font-weight:950;
+  color:#0f172a;
+  font-size:14px;
+}
+.empCard__hire{
+  margin-top:6px;
+  font-size:12px;
+  color:#64748b;
+}
+
+/* Actions */
+.empCard__actions{
+  margin-top:12px;
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+}
+
+.empBtn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size:12px;
+  font-weight:900;
+  text-decoration:none;
+  border:1px solid transparent;
+}
+.empBtn--ghost{
+  background:#fff;
+  border-color:#e2e8f0;
+  color:#0f172a;
+}
+.empBtn--primary{
+  background:#2563eb;
+  border-color:#2563eb;
+  color:#fff;
+}
+.empBtn--primary:hover{ filter: brightness(.96); }
+.empBtn--ghost:hover{ background:#f8fafc; }
+
+/* ===== List mode ===== */
+.empListMode .empCardsWrap{
+  display:flex;
+  flex-direction:column;
+}
+.empListMode .empCard{
+  grid-template-columns: 64px 1fr;
+}
+.empListMode .empCard__side{
+  text-align:left;
+  min-width:auto;
+  margin-top:10px;
+}
+.empListMode .empCard__actions{
+  justify-content:flex-start;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 1200px){
+  .empCardsWrap{ grid-template-columns: repeat(2, minmax(310px, 1fr)); }
+}
+@media (max-width: 760px){
+  .empHero{ align-items:flex-start; flex-direction:column; }
+  .empCardsWrap{ grid-template-columns: 1fr; }
+}
+------
+
+## 7) Page processes/components used
 
 ### 7.1 Application Process: `EMP_PHOTO` (required)
 This page relies on an **On Demand** application process that streams the employee photo BLOB.
 
+Name: EMP_PHOTO
+PL/SQL:
+declare
+  l_photo    blob;
+  l_mimetype varchar2(100);
+begin
+  select photo, image_mime_type
+    into l_photo, l_mimetype
+    from sufioun_employees
+   where employee_id = apex_application.g_x01;
+
+  sys.htp.init;
+  owa_util.mime_header(nvl(l_mimetype,'image/jpeg'), false);
+  owa_util.http_header_close;
+
+  wpg_docload.download_file(l_photo);
+exception
+  when no_data_found then null;
+end;
+---------
 **Contract**
 - Input: `apex_application.g_x01` must be employee_id
-- Output: binary image response using `wpg_docload.download_file`
+- Output: binary image response using `wpg_docload.download_file.`
 
 **Expected table columns**
 - `sufioun_employees.photo` (BLOB)
