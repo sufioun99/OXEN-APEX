@@ -35,7 +35,7 @@ WHERE m.invoice_id = :P140_INVOICE_ID
 Lines
 ```sql
 SELECT p.product_name, d.quantity, d.mrp, d.discount_amount, d.line_total
-FROM sufioun_sales_detail d
+FROM sufioun_sales_details d
 JOIN sufioun_products p ON p.product_id = d.product_id
 WHERE d.invoice_id = :P140_INVOICE_ID
 ORDER BY p.product_name;

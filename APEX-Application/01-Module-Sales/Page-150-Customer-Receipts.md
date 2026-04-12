@@ -19,7 +19,7 @@ Dynamic Actions: Invoice change fetches due amount.
 ## 3) SQL (Build-Ready)
 Form source
 ```sql
-SELECT receipt_id, receipt_no, receipt_date, invoice_id, customer_id, amount,
+SELECT receipt_id, receipt_date, invoice_id, customer_id, amount,
        payment_method, reference_no, notes, received_by, status
 FROM sufioun_customer_receipts
 WHERE receipt_id = :P150_RECEIPT_ID;
@@ -42,7 +42,7 @@ ORDER BY m.invoice_date DESC;
 
 History
 ```sql
-SELECT r.receipt_no, r.receipt_date, c.customer_name, m.invoice_no,
+SELECT r.receipt_id, r.receipt_date, c.customer_name, m.invoice_no,
        r.amount, r.payment_method, r.reference_no
 FROM sufioun_customer_receipts r
 JOIN sufioun_sales_master m ON m.invoice_id = r.invoice_id

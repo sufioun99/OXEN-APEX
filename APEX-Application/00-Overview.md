@@ -222,7 +222,6 @@ ALTER TABLE sufioun_com_users ADD (
 
 CREATE TABLE sufioun_customer_receipts (
   receipt_id        VARCHAR2(50) PRIMARY KEY,
-  receipt_no        VARCHAR2(50) UNIQUE,
   receipt_date      DATE DEFAULT SYSDATE NOT NULL,
   invoice_id        VARCHAR2(50) NOT NULL REFERENCES sufioun_sales_master(invoice_id),
   customer_id       VARCHAR2(50) NOT NULL REFERENCES sufioun_customers(customer_id),

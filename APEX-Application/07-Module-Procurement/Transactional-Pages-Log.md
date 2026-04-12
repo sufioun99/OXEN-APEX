@@ -7,9 +7,13 @@ Use this document whenever a new transactional page is created or changed.
 
 | Page ID | Page Name | Key Table(s) | Status |
 |---|---|---|---|
-| 710 | Purchase Order | sufioun_purchase_order_mst, sufioun_purchase_order_det | Planned |
+| 710 | Purchase Order | sufioun_purchase_order_mst, sufioun_purchase_order_det | Designed |
 | 720 | Purchase Receive | sufioun_purchase_receive_mst, sufioun_purchase_receive_det | Planned |
 | 730 | Purchase Return | sufioun_purchase_return_mst, sufioun_purchase_return_det | Planned |
+
+Detailed docs for Page 710:
+1. Build Log: `APEX-Application/07-Module-Procurement/Page-710-Purchase-Order-Build-Log.md`
+2. Clean Version: `APEX-Application/07-Module-Procurement/Page-710-Purchase-Order-Clean.md`
 
 ---
 

@@ -16,7 +16,7 @@ SELECT m.invoice_no, m.invoice_date, c.customer_name,
        d.product_id, p.product_name, d.quantity, d.mrp, d.discount_amount, d.line_total,
        m.grand_total, m.payment_status
 FROM sufioun_sales_master m
-JOIN sufioun_sales_detail d ON d.invoice_id = m.invoice_id
+JOIN sufioun_sales_details d ON d.invoice_id = m.invoice_id
 JOIN sufioun_products p ON p.product_id = d.product_id
 LEFT JOIN sufioun_customers c ON c.customer_id = m.customer_id
 WHERE m.invoice_date BETWEEN :P630_FROM_DT AND :P630_TO_DT;

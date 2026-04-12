@@ -32,6 +32,7 @@ Update this document each time a requirement, SQL query, process, or UI behavior
 |---|---|---|---|---|---|
 | 2026-04-08 | 1 | Init | Created page documentation skeleton | System | Done |
 | 2026-04-08 | 2 | UI | Added Employees page JavaScript view toggle/card wrapper/stats and full card CSS theme | User | Done |
+| 2026-04-08 | 4 | Issue | Employee photos not displaying (placeholder shown instead) - see TROUBLESHOOTING-EmployeePhotos.md for fix checklist | User | In Progress |
 | 2026-04-08 | 2 | SQL | Added Employees card region SQL with photo process URL and page links (Edit/CV) | User | Done |
 | 2026-04-08 | 3 | Process | Moved EMP_PHOTO logic to schema procedure (`sufioun_media_api.emp_photo`) and documented APEX on-demand bridge | User | Done |
 

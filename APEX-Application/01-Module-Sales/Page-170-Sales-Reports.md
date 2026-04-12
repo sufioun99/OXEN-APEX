@@ -35,7 +35,7 @@ ORDER BY sales_day;
 By product
 ```sql
 SELECT p.product_name, SUM(d.quantity) qty, SUM(d.mrp*d.quantity) gross
-FROM sufioun_sales_detail d
+FROM sufioun_sales_details d
 JOIN sufioun_sales_master m ON m.invoice_id=d.invoice_id
 JOIN sufioun_products p ON p.product_id=d.product_id
 WHERE m.invoice_date BETWEEN :P170_FROM_DT AND :P170_TO_DT
@@ -51,7 +51,7 @@ ORDER BY gross DESC;
 By category
 ```sql
 SELECT c.product_cat_name, SUM(d.quantity) qty, SUM(d.mrp*d.quantity) gross
-FROM sufioun_sales_detail d
+FROM sufioun_sales_details d
 JOIN sufioun_sales_master m ON m.invoice_id=d.invoice_id
 JOIN sufioun_products p ON p.product_id=d.product_id
 LEFT JOIN sufioun_product_categories c ON c.product_cat_id=p.category_id

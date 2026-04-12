@@ -52,7 +52,7 @@ Lines query
 ```sql
 SELECT sales_det_id, invoice_id, product_id, mrp, purchase_price,
        discount_amount, quantity, line_total, description
-FROM sufioun_sales_detail
+FROM sufioun_sales_details
 WHERE invoice_id = :P130_INVOICE_ID;
 ```
 
@@ -81,7 +81,7 @@ FROM dual;
 
 Processes (DML)
 1. APEX Form DML on sufioun_sales_master.
-2. IG Automatic Row Processing on sufioun_sales_detail.
+2. IG Automatic Row Processing on sufioun_sales_details.
 3. Trigger sufioun_trg_sales_detail_sync recalculates totals.
 
 ## 4) HTML (only if required)

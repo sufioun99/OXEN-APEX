@@ -36,7 +36,7 @@ WHERE sales_return_id = :P160_SALES_RETURN_ID;
 Invoice lines reference
 ```sql
 SELECT d.product_id, p.product_name, d.quantity sold_qty, d.mrp, d.discount_amount
-FROM sufioun_sales_detail d
+FROM sufioun_sales_details d
 JOIN sufioun_products p ON p.product_id = d.product_id
 WHERE d.invoice_id = :P160_INVOICE_ID;
 ```
@@ -44,7 +44,7 @@ WHERE d.invoice_id = :P160_INVOICE_ID;
 Validation
 ```sql
 SELECT CASE WHEN :QTY_RETURN <=
-  (SELECT NVL(SUM(quantity),0) FROM sufioun_sales_detail
+  (SELECT NVL(SUM(quantity),0) FROM sufioun_sales_details
    WHERE invoice_id = :P160_INVOICE_ID AND product_id = :PRODUCT_ID)
 THEN 1 ELSE 0 END ok_flag
 FROM dual;

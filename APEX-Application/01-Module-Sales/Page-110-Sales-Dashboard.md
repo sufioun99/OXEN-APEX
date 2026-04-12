@@ -72,7 +72,7 @@ ORDER BY sales_day;
 SELECT p.product_name,
        SUM(d.quantity) qty,
        SUM(d.mrp*d.quantity) gross_amount
-FROM sufioun_sales_detail d
+FROM sufioun_sales_details d
 JOIN sufioun_sales_master m ON m.invoice_id = d.invoice_id
 JOIN sufioun_products p ON p.product_id = d.product_id
 WHERE m.invoice_date BETWEEN :P110_FROM_DT AND :P110_TO_DT

@@ -1,24 +1,24 @@
 -- 002_seed_roles_and_mappings.sql
 -- Seed required application roles and map current users.
 
-INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
-VALUES ('ROL-001', 'ADMIN', 'Admin', 1, USER, SYSDATE);
-INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
-VALUES ('ROL-002', 'SALES_MANAGER', 'Sales Manager', 1, USER, SYSDATE);
-INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
-VALUES ('ROL-003', 'SALES_REP', 'Sales Representative', 1, USER, SYSDATE);
-INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
-VALUES ('ROL-004', 'SERVICE_MANAGER', 'Service Manager', 1, USER, SYSDATE);
-INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
-VALUES ('ROL-005', 'TECHNICIAN', 'Technician', 1, USER, SYSDATE);
-INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
-VALUES ('ROL-006', 'INVENTORY_MANAGER', 'Inventory Manager', 1, USER, SYSDATE);
-INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
-VALUES ('ROL-007', 'STOREKEEPER', 'Storekeeper', 1, USER, SYSDATE);
-INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
-VALUES ('ROL-008', 'CRM_AGENT', 'CRM/Support Agent', 1, USER, SYSDATE);
-INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status, cre_by, cre_dt)
-VALUES ('ROL-009', 'CUSTOMER', 'Customer', 1, USER, SYSDATE);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status)
+VALUES ('ROL-001', 'ADMIN', 'Admin', 1);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status)
+VALUES ('ROL-002', 'SALES_MANAGER', 'Sales Manager', 1);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status)
+VALUES ('ROL-003', 'SALES_REP', 'Sales Representative', 1);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status)
+VALUES ('ROL-004', 'SERVICE_MANAGER', 'Service Manager', 1);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status)
+VALUES ('ROL-005', 'TECHNICIAN', 'Technician', 1);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status)
+VALUES ('ROL-006', 'INVENTORY_MANAGER', 'Inventory Manager', 1);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status)
+VALUES ('ROL-007', 'STOREKEEPER', 'Storekeeper', 1);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status)
+VALUES ('ROL-008', 'CRM_AGENT', 'CRM/Support Agent', 1);
+INSERT INTO sufioun_app_roles (role_id, role_code, role_name, status)
+VALUES ('ROL-009', 'CUSTOMER', 'Customer', 1);
 
 -- Backfill email for existing users from employee records where available.
 UPDATE sufioun_com_users u
@@ -34,7 +34,7 @@ WHERE u.employee_id IS NOT NULL
   );
 
 -- Map legacy single-role records into new role model.
-INSERT INTO sufioun_user_roles (user_id, role_id, is_default, status, cre_by, cre_dt)
+INSERT INTO sufioun_user_roles (user_id, role_id, is_default, status)
 SELECT u.user_id,
        CASE u.role
          WHEN 'admin' THEN 'ROL-001'
@@ -44,9 +44,7 @@ SELECT u.user_id,
          ELSE 'ROL-003'
        END,
        1,
-       1,
-       USER,
-       SYSDATE
+      1
 FROM sufioun_com_users u
 WHERE NOT EXISTS (
   SELECT 1
@@ -55,8 +53,8 @@ WHERE NOT EXISTS (
 );
 
 -- Optional second role grants to satisfy multi-role support for managers.
-INSERT INTO sufioun_user_roles (user_id, role_id, is_default, status, cre_by, cre_dt)
-SELECT u.user_id, 'ROL-004', 0, 1, USER, SYSDATE
+INSERT INTO sufioun_user_roles (user_id, role_id, is_default, status)
+SELECT u.user_id, 'ROL-004', 0, 1
 FROM sufioun_com_users u
 WHERE u.role = 'manager'
   AND NOT EXISTS (
@@ -66,8 +64,8 @@ WHERE u.role = 'manager'
       AND ur.role_id = 'ROL-004'
   );
 
-INSERT INTO sufioun_user_roles (user_id, role_id, is_default, status, cre_by, cre_dt)
-SELECT u.user_id, 'ROL-006', 0, 1, USER, SYSDATE
+INSERT INTO sufioun_user_roles (user_id, role_id, is_default, status)
+SELECT u.user_id, 'ROL-006', 0, 1
 FROM sufioun_com_users u
 WHERE u.role IN ('manager', 'user')
   AND NOT EXISTS (

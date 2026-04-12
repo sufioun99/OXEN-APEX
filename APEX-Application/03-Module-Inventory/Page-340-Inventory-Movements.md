@@ -20,16 +20,16 @@ SELECT movement_dt,
        source_table
 FROM (
   SELECT m.receive_date movement_dt, 'PURCHASE_RECEIVE' movement_type, m.receive_no ref_no,
-         d.product_id, p.product_name, d.receive_quantity qty_change, 'sufioun_product_receive_details' source_table
-  FROM sufioun_product_receive_master m
-  JOIN sufioun_product_receive_details d ON d.receive_id = m.receive_id
+         d.product_id, p.product_name, d.receive_quantity qty_change, 'Sufioun_Purchase_receive_Detailss' source_table
+  FROM Sufioun_Purchase_receive_master m
+  JOIN Sufioun_Purchase_receive_Detailss d ON d.receive_id = m.receive_id
   JOIN sufioun_products p ON p.product_id = d.product_id
 
   UNION ALL
 
-  SELECT m.invoice_date, 'SALES', m.invoice_no, d.product_id, p.product_name, -d.quantity, 'sufioun_sales_detail'
+  SELECT m.invoice_date, 'SALES', m.invoice_no, d.product_id, p.product_name, -d.quantity, 'sufioun_sales_details'
   FROM sufioun_sales_master m
-  JOIN sufioun_sales_detail d ON d.invoice_id = m.invoice_id
+  JOIN sufioun_sales_details d ON d.invoice_id = m.invoice_id
   JOIN sufioun_products p ON p.product_id = d.product_id
 
   UNION ALL
@@ -41,9 +41,9 @@ FROM (
 
   UNION ALL
 
-  SELECT d.damage_date, 'DAMAGE', d.damage_no, dd.product_id, p.product_name, -dd.damage_quantity, 'sufioun_damage_detail'
+  SELECT d.damage_date, 'DAMAGE', d.damage_no, dd.product_id, p.product_name, -dd.damage_quantity, 'sufioun_damage_details'
   FROM sufioun_damage d
-  JOIN sufioun_damage_detail dd ON dd.damage_id = d.damage_id
+  JOIN sufioun_damage_details dd ON dd.damage_id = d.damage_id
   JOIN sufioun_products p ON p.product_id = dd.product_id
 
   UNION ALL

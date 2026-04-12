@@ -223,7 +223,6 @@ ALTER TABLE sufioun_com_users ADD (
 
 CREATE TABLE sufioun_customer_receipts (
   receipt_id        VARCHAR2(50) PRIMARY KEY,
-  receipt_no        VARCHAR2(50) UNIQUE,
   receipt_date      DATE DEFAULT SYSDATE NOT NULL,
   invoice_id        VARCHAR2(50) NOT NULL REFERENCES sufioun_sales_master(invoice_id),
   customer_id       VARCHAR2(50) NOT NULL REFERENCES sufioun_customers(customer_id),
@@ -405,7 +404,7 @@ ORDER BY sales_day;
 SELECT p.product_name,
        SUM(d.quantity) qty,
        SUM(d.mrp*d.quantity) gross_amount
-FROM sufioun_sales_detail d
+FROM sufioun_sales_details d
 JOIN sufioun_sales_master m ON m.invoice_id = d.invoice_id
 JOIN sufioun_products p ON p.product_id = d.product_id
 WHERE m.invoice_date BETWEEN :P110_FROM_DT AND :P110_TO_DT
@@ -613,7 +612,7 @@ Lines query
 ```sql
 SELECT sales_det_id, invoice_id, product_id, mrp, purchase_price,
        discount_amount, quantity, line_total, description
-FROM sufioun_sales_detail
+FROM sufioun_sales_details
 WHERE invoice_id = :P130_INVOICE_ID;
 ```
 
@@ -642,7 +641,7 @@ FROM dual;
 
 Processes (DML)
 1. APEX Form DML on sufioun_sales_master.
-2. IG Automatic Row Processing on sufioun_sales_detail.
+2. IG Automatic Row Processing on sufioun_sales_details.
 3. Trigger sufioun_trg_sales_detail_sync recalculates totals.
 
 ## 4) HTML (only if required)
@@ -707,7 +706,7 @@ WHERE m.invoice_id = :P140_INVOICE_ID
 Lines
 ```sql
 SELECT p.product_name, d.quantity, d.mrp, d.discount_amount, d.line_total
-FROM sufioun_sales_detail d
+FROM sufioun_sales_details d
 JOIN sufioun_products p ON p.product_id = d.product_id
 WHERE d.invoice_id = :P140_INVOICE_ID
 ORDER BY p.product_name;
@@ -756,7 +755,7 @@ Dynamic Actions: Invoice change fetches due amount.
 ## 3) SQL (Build-Ready)
 Form source
 ```sql
-SELECT receipt_id, receipt_no, receipt_date, invoice_id, customer_id, amount,
+SELECT receipt_id, receipt_date, invoice_id, customer_id, amount,
        payment_method, reference_no, notes, received_by, status
 FROM sufioun_customer_receipts
 WHERE receipt_id = :P150_RECEIPT_ID;
@@ -779,7 +778,7 @@ ORDER BY m.invoice_date DESC;
 
 History
 ```sql
-SELECT r.receipt_no, r.receipt_date, c.customer_name, m.invoice_no,
+SELECT r.receipt_id, r.receipt_date, c.customer_name, m.invoice_no,
        r.amount, r.payment_method, r.reference_no
 FROM sufioun_customer_receipts r
 JOIN sufioun_sales_master m ON m.invoice_id = r.invoice_id
@@ -864,7 +863,7 @@ WHERE sales_return_id = :P160_SALES_RETURN_ID;
 Invoice lines reference
 ```sql
 SELECT d.product_id, p.product_name, d.quantity sold_qty, d.mrp, d.discount_amount
-FROM sufioun_sales_detail d
+FROM sufioun_sales_details d
 JOIN sufioun_products p ON p.product_id = d.product_id
 WHERE d.invoice_id = :P160_INVOICE_ID;
 ```
@@ -872,7 +871,7 @@ WHERE d.invoice_id = :P160_INVOICE_ID;
 Validation
 ```sql
 SELECT CASE WHEN :QTY_RETURN <=
-  (SELECT NVL(SUM(quantity),0) FROM sufioun_sales_detail
+  (SELECT NVL(SUM(quantity),0) FROM sufioun_sales_details
    WHERE invoice_id = :P160_INVOICE_ID AND product_id = :PRODUCT_ID)
 THEN 1 ELSE 0 END ok_flag
 FROM dual;
@@ -936,7 +935,7 @@ ORDER BY sales_day;
 By product
 ```sql
 SELECT p.product_name, SUM(d.quantity) qty, SUM(d.mrp*d.quantity) gross
-FROM sufioun_sales_detail d
+FROM sufioun_sales_details d
 JOIN sufioun_sales_master m ON m.invoice_id=d.invoice_id
 JOIN sufioun_products p ON p.product_id=d.product_id
 WHERE m.invoice_date BETWEEN :P170_FROM_DT AND :P170_TO_DT
@@ -952,7 +951,7 @@ ORDER BY gross DESC;
 By category
 ```sql
 SELECT c.product_cat_name, SUM(d.quantity) qty, SUM(d.mrp*d.quantity) gross
-FROM sufioun_sales_detail d
+FROM sufioun_sales_details d
 JOIN sufioun_sales_master m ON m.invoice_id=d.invoice_id
 JOIN sufioun_products p ON p.product_id=d.product_id
 LEFT JOIN sufioun_product_categories c ON c.product_cat_id=p.category_id
@@ -1598,16 +1597,16 @@ SELECT movement_dt,
        source_table
 FROM (
   SELECT m.receive_date movement_dt, 'PURCHASE_RECEIVE' movement_type, m.receive_no ref_no,
-         d.product_id, p.product_name, d.receive_quantity qty_change, 'sufioun_product_receive_details' source_table
-  FROM sufioun_product_receive_master m
-  JOIN sufioun_product_receive_details d ON d.receive_id = m.receive_id
+         d.product_id, p.product_name, d.receive_quantity qty_change, 'Sufioun_Purchase_receive_Detailss' source_table
+  FROM Sufioun_Purchase_receive_master m
+  JOIN Sufioun_Purchase_receive_Detailss d ON d.receive_id = m.receive_id
   JOIN sufioun_products p ON p.product_id = d.product_id
 
   UNION ALL
 
-  SELECT m.invoice_date, 'SALES', m.invoice_no, d.product_id, p.product_name, -d.quantity, 'sufioun_sales_detail'
+  SELECT m.invoice_date, 'SALES', m.invoice_no, d.product_id, p.product_name, -d.quantity, 'sufioun_sales_details'
   FROM sufioun_sales_master m
-  JOIN sufioun_sales_detail d ON d.invoice_id = m.invoice_id
+  JOIN sufioun_sales_details d ON d.invoice_id = m.invoice_id
   JOIN sufioun_products p ON p.product_id = d.product_id
 
   UNION ALL
@@ -1619,9 +1618,9 @@ FROM (
 
   UNION ALL
 
-  SELECT d.damage_date, 'DAMAGE', d.damage_no, dd.product_id, p.product_name, -dd.damage_quantity, 'sufioun_damage_detail'
+  SELECT d.damage_date, 'DAMAGE', d.damage_no, dd.product_id, p.product_name, -dd.damage_quantity, 'sufioun_damage_details'
   FROM sufioun_damage d
-  JOIN sufioun_damage_detail dd ON dd.damage_id = d.damage_id
+  JOIN sufioun_damage_details dd ON dd.damage_id = d.damage_id
   JOIN sufioun_products p ON p.product_id = dd.product_id
 
   UNION ALL
@@ -2462,7 +2461,7 @@ SELECT m.invoice_no, m.invoice_date, c.customer_name,
        d.product_id, p.product_name, d.quantity, d.mrp, d.discount_amount, d.line_total,
        m.grand_total, m.payment_status
 FROM sufioun_sales_master m
-JOIN sufioun_sales_detail d ON d.invoice_id = m.invoice_id
+JOIN sufioun_sales_details d ON d.invoice_id = m.invoice_id
 JOIN sufioun_products p ON p.product_id = d.product_id
 LEFT JOIN sufioun_customers c ON c.customer_id = m.customer_id
 WHERE m.invoice_date BETWEEN :P630_FROM_DT AND :P630_TO_DT;

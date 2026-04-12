@@ -5,11 +5,7 @@ CREATE TABLE sufioun_app_roles (
   role_id        VARCHAR2(50) PRIMARY KEY,
   role_code      VARCHAR2(50) UNIQUE NOT NULL,
   role_name      VARCHAR2(150) NOT NULL,
-  status         NUMBER(1) DEFAULT 1 CHECK (status IN (0,1)),
-  cre_by         VARCHAR2(100),
-  cre_dt         DATE,
-  upd_by         VARCHAR2(100),
-  upd_dt         DATE
+  status         NUMBER(1) DEFAULT 1 CHECK (status IN (0,1))
 );
 
 CREATE TABLE sufioun_user_roles (
@@ -18,10 +14,6 @@ CREATE TABLE sufioun_user_roles (
   role_id        VARCHAR2(50) NOT NULL REFERENCES sufioun_app_roles(role_id),
   is_default     NUMBER(1) DEFAULT 0 CHECK (is_default IN (0,1)),
   status         NUMBER(1) DEFAULT 1 CHECK (status IN (0,1)),
-  cre_by         VARCHAR2(100),
-  cre_dt         DATE,
-  upd_by         VARCHAR2(100),
-  upd_dt         DATE,
   CONSTRAINT sufioun_uk_user_role UNIQUE (user_id, role_id)
 );
 
@@ -47,7 +39,6 @@ ALTER TABLE sufioun_com_users ADD (
 
 CREATE TABLE sufioun_customer_receipts (
   receipt_id        VARCHAR2(50) PRIMARY KEY,
-  receipt_no        VARCHAR2(50) UNIQUE,
   receipt_date      DATE DEFAULT SYSDATE NOT NULL,
   invoice_id        VARCHAR2(50) NOT NULL REFERENCES sufioun_sales_master(invoice_id),
   customer_id       VARCHAR2(50) NOT NULL REFERENCES sufioun_customers(customer_id),
@@ -151,13 +142,6 @@ BEGIN
   IF INSERTING AND :NEW.user_role_id IS NULL THEN
     :NEW.user_role_id := 'URL' || TO_CHAR(sufioun_user_role_seq.NEXTVAL);
   END IF;
-  IF INSERTING THEN
-    IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
-    IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
-  ELSE
-    :NEW.upd_by := USER;
-    :NEW.upd_dt := SYSDATE;
-  END IF;
 END;
 /
 
@@ -167,9 +151,6 @@ FOR EACH ROW
 BEGIN
   IF INSERTING AND :NEW.receipt_id IS NULL THEN
     :NEW.receipt_id := 'RCT' || TO_CHAR(sufioun_receipt_seq.NEXTVAL);
-  END IF;
-  IF INSERTING AND :NEW.receipt_no IS NULL THEN
-    :NEW.receipt_no := 'RCT-' || TO_CHAR(SYSDATE, 'YYYYMMDD') || '-' || LPAD(sufioun_receipt_seq.CURRVAL, 6, '0');
   END IF;
   IF INSERTING THEN
     IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
