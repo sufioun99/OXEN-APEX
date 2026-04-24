@@ -1,0 +1,2163 @@
+--------------------------------------------------------------------------------
+-- 01. sufioun_COMPANY
+-- Stores mother company information
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_company (
+    company_id          VARCHAR2(50) PRIMARY KEY,
+    company_name        VARCHAR2(200) NOT NULL UNIQUE,
+    company_proprietor  VARCHAR2(200),
+    phone_no            VARCHAR2(50) NOT NULL UNIQUE,
+    email               VARCHAR2(200) NOT NULL UNIQUE,
+    address             VARCHAR2(300),
+    website             VARCHAR2(200) UNIQUE,
+    contact_person      VARCHAR2(200),
+    cp_designation      VARCHAR2(200),
+    cp_phone_no         VARCHAR2(50),
+    tag_line            VARCHAR2(300),
+    mission_vision      VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name          VARCHAR2(500),
+    image_mime_type     VARCHAR2(100),
+    image_blob          BLOB,
+    --
+    status              NUMBER,
+    cre_by              VARCHAR2(100),
+    cre_dt              DATE,
+    upd_by              VARCHAR2(100),
+    upd_dt              DATE
+)
+LOB (image_blob) STORE AS (
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+);
+/
+
+CREATE SEQUENCE sufioun_company_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_company_bi
+BEFORE INSERT OR UPDATE ON sufioun_company FOR EACH ROW
+DECLARE v_seq NUMBER; v_code VARCHAR2(100);
+BEGIN
+    IF INSERTING AND :NEW.company_id IS NULL THEN
+        v_seq := sufioun_company_seq.NEXTVAL;
+        v_code := UPPER(SUBSTR(TRIM(:NEW.company_name),1,3));
+        :NEW.company_id := NVL(v_code, 'COM') || TO_CHAR(v_seq);
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER;
+        :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 02. sufioun_BRANCHES
+-- Branch master under mother company
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_branches (
+  branch_id       VARCHAR2(50) PRIMARY KEY,
+  company_id      VARCHAR2(50) NOT NULL,
+  branch_code     VARCHAR2(50) NOT NULL UNIQUE,
+  branch_name     VARCHAR2(200) NOT NULL,
+  phone_no        VARCHAR2(50) UNIQUE,
+  email           VARCHAR2(200) UNIQUE,
+  address         VARCHAR2(300),
+  location        VARCHAR2(200),
+  is_hq           NUMBER(1) DEFAULT 0 CHECK (is_hq IN (0, 1)),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+  status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+  cre_by          VARCHAR2(100),
+  cre_dt          DATE,
+  upd_by          VARCHAR2(100),
+  upd_dt          DATE,
+  CONSTRAINT sufioun_fk_branch_company FOREIGN KEY (company_id) REFERENCES sufioun_company(company_id),
+  CONSTRAINT sufioun_uk_branch_name UNIQUE (company_id, branch_name)
+);
+/
+
+CREATE SEQUENCE sufioun_branches_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_branches_bi
+BEFORE INSERT OR UPDATE ON sufioun_branches FOR EACH ROW
+DECLARE
+  v_seq NUMBER;
+  v_code VARCHAR2(100);
+BEGIN
+  IF INSERTING AND :NEW.branch_id IS NULL THEN
+    v_seq := sufioun_branches_seq.NEXTVAL;
+    IF :NEW.branch_code IS NOT NULL THEN
+      :NEW.branch_id := UPPER(TRIM(:NEW.branch_code));
+    ELSE
+      v_code := UPPER(SUBSTR(TRIM(:NEW.branch_name), 1, 3));
+      :NEW.branch_id := NVL(v_code, 'BRN') || '-' || LPAD(v_seq, 2, '0');
+    END IF;
+  END IF;
+
+  IF INSERTING THEN
+    IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+    IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+    IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+  ELSIF UPDATING THEN
+    :NEW.upd_by := USER;
+    :NEW.upd_dt := SYSDATE;
+  END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 03. sufioun_JOBS
+-- Job/Position definitions with grade system
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_jobs (
+    job_id       VARCHAR2(50) PRIMARY KEY,
+    job_code     VARCHAR2(50),
+    job_title    VARCHAR2(150),
+    job_grade    VARCHAR2(1),
+    min_salary   NUMBER(15,2),
+    max_salary   NUMBER(15,2),
+    job_desc     VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    status       NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+    cre_by       VARCHAR2(100),
+    cre_dt       DATE,
+    upd_by       VARCHAR2(100),
+    upd_dt       DATE,
+    CONSTRAINT sufioun_chk_job_grade CHECK (job_grade IN ('A','B','C') OR job_grade IS NULL)
+);
+/
+
+CREATE SEQUENCE sufioun_jobs_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_jobs_bi
+BEFORE INSERT OR UPDATE ON sufioun_jobs FOR EACH ROW
+DECLARE v_seq NUMBER; v_code VARCHAR2(100);
+BEGIN
+    IF INSERTING AND :NEW.job_id IS NULL THEN
+        v_seq := sufioun_jobs_seq.NEXTVAL; 
+        IF :NEW.job_code IS NOT NULL THEN
+            v_code := UPPER(TRIM(:NEW.job_code));
+            :NEW.job_id := v_code || TO_CHAR(v_seq);
+        ELSE :NEW.job_id := TO_CHAR(v_seq); END IF;
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER;
+        :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 03. sufioun_CUSTOMERS
+-- Customer information with photo support
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_customers (
+    customer_id   VARCHAR2(50) PRIMARY KEY,
+    phone_no      VARCHAR2(50) UNIQUE, 
+    customer_name VARCHAR2(150) NOT NULL,
+    alt_phone_no  VARCHAR2(50),
+    email         VARCHAR2(150),
+    address       VARCHAR2(300),
+    city          VARCHAR2(100),
+    rewards       NUMBER(10) DEFAULT 0,
+    remarks       VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name    VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob    BLOB,
+    --
+    status        NUMBER,
+    cre_by        VARCHAR2(100),
+    cre_dt        DATE,
+    upd_by        VARCHAR2(100),
+    upd_dt        DATE
+)
+LOB (image_blob) STORE AS (
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+);
+/
+
+CREATE SEQUENCE sufioun_customers_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_customers_bi
+BEFORE INSERT OR UPDATE ON sufioun_customers FOR EACH ROW
+DECLARE v_seq NUMBER; v_code VARCHAR2(10);
+BEGIN
+    IF INSERTING AND :NEW.customer_id IS NULL THEN
+        IF :NEW.phone_no IS NOT NULL THEN :NEW.customer_id := :NEW.phone_no;
+        ELSE
+            v_seq := sufioun_customers_seq.NEXTVAL;
+            v_code := UPPER(SUBSTR(TRIM(:NEW.customer_name),1,3));
+            :NEW.customer_id := v_code || TO_CHAR(v_seq);
+        END IF;
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER;
+        :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 04. sufioun_PARTS_CATEGORY
+-- Parts category classification with icons
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_parts_category (
+    parts_cat_id    VARCHAR2(50) PRIMARY KEY,
+    parts_cat_code  VARCHAR2(50),
+    parts_cat_name  VARCHAR2(150) ,
+  sort_order      NUMBER(5) DEFAULT 0,
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    status          NUMBER,
+    cre_by          VARCHAR2(100),
+    cre_dt          DATE,
+    upd_by          VARCHAR2(100),
+    upd_dt          DATE
+)
+LOB (image_blob) STORE AS (
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+);
+/
+
+CREATE SEQUENCE sufioun_parts_cat_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_parts_cat_bi
+BEFORE INSERT OR UPDATE ON sufioun_parts_category FOR EACH ROW
+DECLARE v_seq NUMBER; v_code VARCHAR2(100);
+BEGIN
+    IF INSERTING AND :NEW.parts_cat_id IS NULL THEN
+        v_seq := sufioun_parts_cat_seq.NEXTVAL;
+        IF :NEW.parts_cat_code IS NOT NULL THEN
+            v_code := UPPER(TRIM(:NEW.parts_cat_code));
+            :NEW.parts_cat_id := v_code || TO_CHAR(v_seq);
+        ELSE :NEW.parts_cat_id := TO_CHAR(v_seq); END IF;
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER;
+        :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 05. sufioun_PRODUCT_CATEGORIES
+-- Product category classification with icons
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_product_categories (
+    product_cat_id    VARCHAR2(50) PRIMARY KEY,
+    product_cat_name  VARCHAR2(150) ,
+  sort_order        NUMBER(5) DEFAULT 0,
+    -- APEX Image Columns
+    image_name        VARCHAR2(500),
+    image_mime_type   VARCHAR2(100),
+    image_blob        BLOB,
+    --
+    status            NUMBER,
+    cre_by            VARCHAR2(100),
+    cre_dt            DATE,
+    upd_by            VARCHAR2(100),
+    upd_dt            DATE
+)
+LOB (image_blob) STORE AS (
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+);
+/
+
+CREATE SEQUENCE sufioun_prod_cat_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_prod_cat_bi
+BEFORE INSERT OR UPDATE ON sufioun_product_categories FOR EACH ROW
+DECLARE v_seq NUMBER; v_code VARCHAR2(100);
+BEGIN
+    IF INSERTING AND :NEW.product_cat_id IS NULL THEN
+        v_seq := sufioun_prod_cat_seq.NEXTVAL;
+        v_code := UPPER(SUBSTR(TRIM(:NEW.product_cat_name),1,3));
+        :NEW.product_cat_id := NVL(v_code, 'CAT') || TO_CHAR(v_seq);
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER;
+        :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 06. sufioun_BRAND
+-- Brand/Manufacturer information with logos
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_brand (
+    brand_id      VARCHAR2(50) PRIMARY KEY,
+  brand_code    VARCHAR2(30) UNIQUE,
+    brand_name    VARCHAR2(150),
+  country_of_origin VARCHAR2(100),
+  founded_year  NUMBER(4),
+  website_url   VARCHAR2(300),
+  support_email VARCHAR2(200),
+  support_phone VARCHAR2(50),
+  warranty_policy VARCHAR2(2000),
+  display_order NUMBER(5) DEFAULT 0,
+  is_featured   NUMBER(1) DEFAULT 0 CHECK (is_featured IN (0, 1)),
+  seo_slug      VARCHAR2(150) UNIQUE,
+  status_reason VARCHAR2(500),
+  last_review_dt DATE,
+    brand_desc    VARCHAR2(500),
+    -- APEX Image Columns
+    image_name    VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob    BLOB,
+    --
+    status        NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+    cre_by        VARCHAR2(100),
+    cre_dt        DATE,
+    upd_by        VARCHAR2(100),
+    upd_dt        DATE
+)
+LOB (image_blob) STORE AS (
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+);
+/
+
+CREATE SEQUENCE sufioun_brand_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_brand_bi
+BEFORE INSERT OR UPDATE ON sufioun_brand FOR EACH ROW
+DECLARE v_seq NUMBER; v_code VARCHAR2(100);
+BEGIN
+    IF INSERTING AND :NEW.brand_id IS NULL THEN
+        v_seq := sufioun_brand_seq.NEXTVAL;
+        v_code := UPPER(SUBSTR(TRIM(:NEW.brand_name),1,3));
+        :NEW.brand_id := NVL(v_code, 'BRD') || TO_CHAR(v_seq);
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER;
+        :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 07. sufioun_SUPPLIERS
+-- Supplier/Vendor information with logos
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_suppliers (
+    supplier_id    VARCHAR2(50) PRIMARY KEY,
+    supplier_name  VARCHAR2(150) NOT NULL,
+    phone_no       VARCHAR2(30),
+    email          VARCHAR2(150),
+    address        VARCHAR2(300),
+    city           VARCHAR2(100),
+    contact_person VARCHAR2(100),
+    cp_designation VARCHAR2(100),
+    cp_phone_no    VARCHAR2(30),
+    cp_email       VARCHAR2(150),
+    purchase_total NUMBER DEFAULT 0,
+    pay_total      NUMBER DEFAULT 0,
+    due            NUMBER,
+    -- APEX Image Columns
+    image_name     VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob     BLOB,
+    --
+    status         NUMBER,
+    cre_by         VARCHAR2(100),
+    cre_dt         DATE,
+    upd_by         VARCHAR2(100),
+    upd_dt         DATE
+)
+LOB (image_blob) STORE AS (
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+);
+/
+
+CREATE SEQUENCE sufioun_suppliers_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_suppliers_bi
+BEFORE INSERT OR UPDATE ON sufioun_suppliers FOR EACH ROW
+DECLARE v_seq NUMBER; v_code VARCHAR2(100);
+BEGIN
+    IF INSERTING AND :NEW.supplier_id IS NULL THEN
+        v_seq := sufioun_suppliers_seq.NEXTVAL;
+        v_code := UPPER(SUBSTR(TRIM(:NEW.supplier_name),1,3));
+        :NEW.supplier_id := NVL(v_code, 'SUP') || TO_CHAR(v_seq);
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER;
+        :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 08. sufioun_SERVICE_LIST
+-- Service types with costs
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_service_list (
+    servicelist_id VARCHAR2(50) PRIMARY KEY,
+    service_name   VARCHAR2(150) NOT NULL,
+    service_desc   VARCHAR2(1000),
+    service_cost   NUMBER(15,2) DEFAULT 0,
+    estimated_time NUMBER(5) DEFAULT 0,
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    status         NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+    cre_by         VARCHAR2(100),
+    cre_dt         DATE,
+    upd_by         VARCHAR2(100),
+    upd_dt         DATE
+);
+/
+
+CREATE SEQUENCE sufioun_service_list_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_service_list_bi
+BEFORE INSERT OR UPDATE ON sufioun_service_list FOR EACH ROW
+DECLARE v_seq NUMBER; v_code VARCHAR2(100);
+BEGIN
+    IF INSERTING AND :NEW.servicelist_id IS NULL THEN
+        v_seq := sufioun_service_list_seq.NEXTVAL;
+        v_code := UPPER(SUBSTR(TRIM(:NEW.service_name),1,3));
+        :NEW.servicelist_id := NVL(v_code, 'SRV') || TO_CHAR(v_seq);
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER; :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 09. sufioun_EXPENSE_LIST
+-- Expense types with default amounts
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_expense_list (
+    expense_type_id VARCHAR2(50) PRIMARY KEY,
+    expense_code    VARCHAR2(50),
+    type_name       VARCHAR2(200),
+    description     VARCHAR2(1000),
+    default_amount  NUMBER(15,2),
+    expense_category VARCHAR2(100),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+    cre_by          VARCHAR2(100),
+    cre_dt          DATE,
+    upd_by          VARCHAR2(100),
+    upd_dt          DATE
+);
+/
+
+CREATE SEQUENCE sufioun_exp_list_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_exp_list_bi
+BEFORE INSERT OR UPDATE ON sufioun_expense_list FOR EACH ROW
+DECLARE v_seq NUMBER; v_code VARCHAR2(100);
+BEGIN
+    IF INSERTING AND :NEW.expense_type_id IS NULL THEN
+        v_seq := sufioun_exp_list_seq.NEXTVAL; 
+        IF :NEW.expense_code IS NOT NULL THEN
+            v_code := UPPER(TRIM(:NEW.expense_code));
+            :NEW.expense_type_id := v_code || TO_CHAR(v_seq);
+        ELSE :NEW.expense_type_id := TO_CHAR(v_seq); END IF;
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER; :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 10. sufioun_SUB_CATEGORIES
+-- Sub-category linked to product categories
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_sub_categories (
+    sub_cat_id       VARCHAR2(50) PRIMARY KEY,
+    sub_cat_name     VARCHAR2(150),
+    sub_cat_desc     VARCHAR2(500),
+    product_cat_id   VARCHAR2(50) REFERENCES sufioun_product_categories(product_cat_id),
+    sort_order       NUMBER(5) DEFAULT 0,
+    -- APEX Image Columns
+    image_name       VARCHAR2(500),
+    image_mime_type  VARCHAR2(100),
+    image_blob       BLOB,
+    --
+    status           NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+    cre_by           VARCHAR2(100),
+    cre_dt           DATE,
+    upd_by           VARCHAR2(100),
+    upd_dt           DATE
+)
+LOB (image_blob) STORE AS (
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+);
+/
+
+CREATE SEQUENCE sufioun_sub_cat_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_sub_cat_bi
+BEFORE INSERT OR UPDATE ON sufioun_sub_categories FOR EACH ROW
+DECLARE v_seq NUMBER; v_code VARCHAR2(100);
+BEGIN
+    IF INSERTING AND :NEW.sub_cat_id IS NULL THEN
+        v_seq := sufioun_sub_cat_seq.NEXTVAL;
+        v_code := UPPER(SUBSTR(TRIM(:NEW.sub_cat_name),1,3));
+        :NEW.sub_cat_id := NVL(v_code, 'SUB') || TO_CHAR(v_seq);
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER; :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 11. sufioun_PRODUCTS
+-- Product master with images
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_products (
+    product_id      VARCHAR2(50) PRIMARY KEY,
+    product_code    VARCHAR2(30),
+  barcode         VARCHAR2(100),
+    product_name    VARCHAR2(150) NOT NULL,
+    product_desc    VARCHAR2(1000),
+    supplier_id     VARCHAR2(50) REFERENCES sufioun_suppliers(supplier_id),
+    category_id     VARCHAR2(50) REFERENCES sufioun_product_categories(product_cat_id),
+    sub_cat_id      VARCHAR2(50) REFERENCES sufioun_sub_categories(sub_cat_id),
+    brand_id        VARCHAR2(50) REFERENCES sufioun_brand(brand_id),
+    model_name      VARCHAR2(150),
+    product_size    VARCHAR2(30),
+    color           VARCHAR2(50),
+    uom             VARCHAR2(20),
+    mrp             NUMBER,
+    purchase_price  NUMBER,
+    warranty        NUMBER, 
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    status          NUMBER,
+    cre_by          VARCHAR2(100),
+    cre_dt          DATE,
+    upd_by          VARCHAR2(100),
+    upd_dt          DATE
+)
+LOB (image_blob) STORE AS (
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+);
+/
+
+CREATE SEQUENCE sufioun_products_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_products_bi
+BEFORE INSERT OR UPDATE ON sufioun_products FOR EACH ROW
+DECLARE v_seq NUMBER; v_code VARCHAR2(100);
+BEGIN
+    IF INSERTING AND :NEW.product_id IS NULL THEN
+        v_seq := sufioun_products_seq.NEXTVAL;
+        IF :NEW.product_code IS NOT NULL THEN
+            :NEW.product_id := UPPER(TRIM(:NEW.product_code)) || TO_CHAR(v_seq);
+        ELSE :NEW.product_id := TO_CHAR(v_seq); END IF;
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER; :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 12. sufioun_PARTS
+-- Spare parts with images
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_parts (
+    parts_id       VARCHAR2(50) PRIMARY KEY,
+    parts_code     VARCHAR2(50),
+    parts_name     VARCHAR2(150),
+    parts_desc     VARCHAR2(1000),
+    purchase_price NUMBER(15,2),
+    mrp            NUMBER(15,2),
+    parts_cat_id   VARCHAR2(50) REFERENCES sufioun_parts_category(parts_cat_id),
+    -- APEX Image Columns
+    image_name     VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob     BLOB,
+    --
+    status         NUMBER,
+    cre_by         VARCHAR2(100),
+    cre_dt         DATE,
+    upd_by         VARCHAR2(100),
+    upd_dt         DATE
+)
+LOB (image_blob) STORE AS (
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+);
+/
+
+CREATE SEQUENCE sufioun_parts_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_parts_bi
+BEFORE INSERT OR UPDATE ON sufioun_parts FOR EACH ROW
+DECLARE v_seq NUMBER; v_code VARCHAR2(100);
+BEGIN
+    IF INSERTING AND :NEW.parts_id IS NULL THEN
+        v_seq := sufioun_parts_seq.NEXTVAL;
+        IF :NEW.parts_code IS NOT NULL THEN
+            v_code := UPPER(TRIM(:NEW.parts_code));
+            :NEW.parts_id := v_code || TO_CHAR(v_seq);
+        ELSE :NEW.parts_id := TO_CHAR(v_seq); END IF;
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER; :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 14. sufioun_DEPARTMENTS
+-- Department/Unit organization
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_departments (
+    department_id   VARCHAR2(50) PRIMARY KEY,
+    department_name VARCHAR2(100),
+    department_desc VARCHAR2(500),
+    manager_id      VARCHAR2(50),
+    branch_id       VARCHAR2(50) NOT NULL,
+    location        VARCHAR2(200),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+    cre_by          VARCHAR2(100),
+    cre_dt          DATE,
+    upd_by          VARCHAR2(100),
+    upd_dt          DATE,
+    CONSTRAINT sufioun_fk_dept_branch FOREIGN KEY (branch_id) REFERENCES sufioun_branches(branch_id)
+);
+/
+
+CREATE SEQUENCE sufioun_departments_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_departments_bi
+BEFORE INSERT OR UPDATE ON sufioun_departments FOR EACH ROW
+DECLARE v_seq NUMBER; v_code VARCHAR2(100);
+BEGIN
+    IF INSERTING AND :NEW.department_id IS NULL THEN
+        v_seq := sufioun_departments_seq.NEXTVAL;
+        v_code := UPPER(SUBSTR(TRIM(:NEW.department_name),1,3));
+        :NEW.department_id := NVL(v_code, 'DEP') || TO_CHAR(v_seq);
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER;
+        :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 15. sufioun_EMPLOYEES
+-- Employee master with photo support
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_employees (
+    employee_id   VARCHAR2(50) PRIMARY KEY,
+    first_name    VARCHAR2(50),
+    last_name     VARCHAR2(50) NOT NULL,
+    email         VARCHAR2(150),
+    phone_no      VARCHAR2(30),
+    address       VARCHAR2(4000),
+    date_of_birth DATE,
+    hire_date     DATE,
+    salary        NUMBER(15,2),
+    job_id        VARCHAR2(50),
+    manager_id    VARCHAR2(50), 
+    department_id VARCHAR2(50),
+    photo         BLOB,
+    emp_code      VARCHAR2(50),
+    -- APEX Image Columns for Photo
+    image_name    VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob    BLOB,
+    --
+    status        NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+    cre_by        VARCHAR2(100),
+    cre_dt        DATE,
+    upd_by        VARCHAR2(100),
+    upd_dt        DATE,
+    CONSTRAINT sufioun_fk_emp_job  FOREIGN KEY (job_id) REFERENCES sufioun_jobs(job_id),
+    CONSTRAINT sufioun_fk_emp_dept FOREIGN KEY (department_id) REFERENCES sufioun_departments(department_id)
+)
+LOB (photo) STORE AS (
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+)
+LOB (image_blob) STORE AS (
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+);
+/
+
+CREATE SEQUENCE sufioun_employees_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+ALTER TABLE sufioun_employees ADD CONSTRAINT sufioun_fk_emp_mgr
+FOREIGN KEY (manager_id)
+REFERENCES sufioun_employees(employee_id)
+DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE sufioun_departments ADD CONSTRAINT sufioun_fk_dept_mgr 
+FOREIGN KEY (manager_id) 
+REFERENCES sufioun_employees(employee_id) 
+DEFERRABLE INITIALLY DEFERRED;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_employees_bi
+BEFORE INSERT OR UPDATE ON sufioun_employees FOR EACH ROW
+DECLARE v_seq NUMBER; v_code VARCHAR2(100);
+BEGIN
+    IF INSERTING AND :NEW.employee_id IS NULL THEN
+        v_seq := sufioun_employees_seq.NEXTVAL;
+        v_code := UPPER(SUBSTR(TRIM(:NEW.last_name),1,3));
+        :NEW.employee_id := NVL(v_code, 'EMP') || TO_CHAR(v_seq);
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER;
+        :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+    --------------------------------------------------------------------------------
+    -- 15A. sufioun_EMPLOYEE_CV
+    -- Extended CV profile sections per employee
+    --------------------------------------------------------------------------------
+    CREATE TABLE sufioun_employee_cv (
+      employee_id     VARCHAR2(50) PRIMARY KEY,
+      profile         CLOB,
+      skills          CLOB,
+      education       CLOB,
+      certifications  CLOB,
+      projects        CLOB,
+      languages       CLOB,
+      references_txt  CLOB,
+      updated_at      TIMESTAMP(6) DEFAULT SYSTIMESTAMP,
+      CONSTRAINT sufioun_fk_emp_cv_emp FOREIGN KEY (employee_id)
+        REFERENCES sufioun_employees(employee_id) ON DELETE CASCADE
+    );
+    /
+
+    CREATE OR REPLACE TRIGGER sufioun_trg_emp_cv_biu
+    BEFORE INSERT OR UPDATE ON sufioun_employee_cv
+    FOR EACH ROW
+    BEGIN
+      :NEW.updated_at := SYSTIMESTAMP;
+    END;
+    /
+
+  --------------------------------------------------------------------------------
+  -- 15B. sufioun_MEDIA_API
+  -- Helper package for APEX image streaming
+  --------------------------------------------------------------------------------
+  CREATE OR REPLACE PACKAGE sufioun_media_api AS
+    PROCEDURE emp_photo;
+    PROCEDURE emp_photo(p_employee_id IN sufioun_employees.employee_id%TYPE);
+    PROCEDURE brand_logo;
+    PROCEDURE brand_logo(p_brand_id IN sufioun_brand.brand_id%TYPE);
+    PROCEDURE supplier_logo;
+    PROCEDURE supplier_logo(p_supplier_id IN sufioun_suppliers.supplier_id%TYPE);
+    PROCEDURE product_image;
+    PROCEDURE product_image(p_product_id IN sufioun_products.product_id%TYPE);
+    PROCEDURE stream_blob(
+      p_table_name  IN VARCHAR2,
+      p_pk_value    IN VARCHAR2,
+      p_blob_column IN VARCHAR2 DEFAULT NULL,
+      p_mime_column IN VARCHAR2 DEFAULT NULL,
+      p_pk_column   IN VARCHAR2 DEFAULT NULL
+    );
+  END sufioun_media_api;
+  /
+
+  CREATE OR REPLACE PACKAGE BODY sufioun_media_api AS
+    FUNCTION one_px_png RETURN BLOB IS
+      l_blob BLOB;
+      l_raw  RAW(32767);
+    BEGIN
+      l_raw := HEXTORAW('89504E470D0A1A0A0000000D49484452000000010000000108060000001F15C4890000000A49444154789C6360000002000154A24F5D0000000049454E44AE426082');
+      DBMS_LOB.CREATETEMPORARY(l_blob, TRUE);
+      DBMS_LOB.WRITEAPPEND(l_blob, UTL_RAW.LENGTH(l_raw), l_raw);
+      RETURN l_blob;
+    END one_px_png;
+
+    FUNCTION has_column(
+      p_table_name  IN VARCHAR2,
+      p_column_name IN VARCHAR2
+    ) RETURN BOOLEAN IS
+      l_cnt NUMBER;
+    BEGIN
+      SELECT COUNT(*)
+        INTO l_cnt
+        FROM user_tab_columns
+       WHERE table_name = UPPER(TRIM(p_table_name))
+         AND column_name = UPPER(TRIM(p_column_name));
+      RETURN l_cnt > 0;
+    END has_column;
+
+    FUNCTION resolve_pk_column(
+      p_table_name IN VARCHAR2,
+      p_pk_column  IN VARCHAR2
+    ) RETURN VARCHAR2 IS
+      l_pk_col VARCHAR2(128);
+    BEGIN
+      IF p_pk_column IS NOT NULL THEN
+        l_pk_col := UPPER(TRIM(p_pk_column));
+        IF NOT has_column(p_table_name, l_pk_col) THEN
+          RAISE_APPLICATION_ERROR(-20014, 'Invalid PK column for table ' || UPPER(TRIM(p_table_name)));
+        END IF;
+        RETURN l_pk_col;
+      END IF;
+
+      SELECT cc.column_name
+        INTO l_pk_col
+        FROM user_constraints c
+        JOIN user_cons_columns cc
+          ON cc.constraint_name = c.constraint_name
+         AND cc.table_name = c.table_name
+       WHERE c.table_name = UPPER(TRIM(p_table_name))
+         AND c.constraint_type = 'P'
+         AND cc.position = 1;
+
+      RETURN l_pk_col;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20015, 'Primary key column not found for table ' || UPPER(TRIM(p_table_name)));
+    END resolve_pk_column;
+
+    PROCEDURE emit_blob(
+      p_blob     IN BLOB,
+      p_mimetype IN VARCHAR2
+    ) IS
+      l_blob BLOB;
+    BEGIN
+      l_blob := p_blob;
+      SYS.HTP.INIT;
+      OWA_UTIL.MIME_HEADER(NVL(p_mimetype, 'image/jpeg'), FALSE);
+      HTP.P('Cache-Control: no-store');
+      OWA_UTIL.HTTP_HEADER_CLOSE;
+      WPG_DOCLOAD.DOWNLOAD_FILE(l_blob);
+    END emit_blob;
+
+    PROCEDURE stream_blob(
+      p_table_name  IN VARCHAR2,
+      p_pk_value    IN VARCHAR2,
+      p_blob_column IN VARCHAR2 DEFAULT NULL,
+      p_mime_column IN VARCHAR2 DEFAULT NULL,
+      p_pk_column   IN VARCHAR2 DEFAULT NULL
+    ) IS
+      l_table_name VARCHAR2(128);
+      l_blob_col   VARCHAR2(128);
+      l_mime_col   VARCHAR2(128);
+      l_pk_col     VARCHAR2(128);
+      l_sql        VARCHAR2(32767);
+      l_photo      BLOB;
+      l_mimetype   VARCHAR2(100);
+      l_exists     NUMBER;
+    BEGIN
+      l_table_name := UPPER(TRIM(p_table_name));
+
+      IF l_table_name IS NULL OR l_table_name NOT LIKE 'SUFIOUN_%' THEN
+        RAISE_APPLICATION_ERROR(-20010, 'Invalid table name for media streaming');
+      END IF;
+
+      SELECT COUNT(*)
+        INTO l_exists
+        FROM user_tables
+       WHERE table_name = l_table_name;
+
+      IF l_exists = 0 THEN
+        RAISE_APPLICATION_ERROR(-20011, 'Table not found: ' || l_table_name);
+      END IF;
+
+      IF p_blob_column IS NOT NULL THEN
+        l_blob_col := UPPER(TRIM(p_blob_column));
+      ELSIF has_column(l_table_name, 'PHOTO') THEN
+        l_blob_col := 'PHOTO';
+      ELSIF has_column(l_table_name, 'IMAGE_BLOB') THEN
+        l_blob_col := 'IMAGE_BLOB';
+      ELSE
+        RAISE_APPLICATION_ERROR(-20012, 'No BLOB column found for table ' || l_table_name);
+      END IF;
+
+      IF NOT has_column(l_table_name, l_blob_col) THEN
+        RAISE_APPLICATION_ERROR(-20013, 'Invalid BLOB column for table ' || l_table_name);
+      END IF;
+
+      IF p_mime_column IS NOT NULL THEN
+        l_mime_col := UPPER(TRIM(p_mime_column));
+        IF NOT has_column(l_table_name, l_mime_col) THEN
+          l_mime_col := NULL;
+        END IF;
+      ELSIF has_column(l_table_name, 'IMAGE_MIME_TYPE') THEN
+        l_mime_col := 'IMAGE_MIME_TYPE';
+      ELSE
+        l_mime_col := NULL;
+      END IF;
+
+      l_pk_col := resolve_pk_column(l_table_name, p_pk_column);
+
+      l_sql := 'SELECT ' || DBMS_ASSERT.SIMPLE_SQL_NAME(l_blob_col) ||
+               ', ' || CASE
+                         WHEN l_mime_col IS NOT NULL THEN DBMS_ASSERT.SIMPLE_SQL_NAME(l_mime_col)
+                         ELSE 'CAST(NULL AS VARCHAR2(100))'
+                       END ||
+               ' FROM ' || DBMS_ASSERT.SIMPLE_SQL_NAME(l_table_name) ||
+               ' WHERE ' || DBMS_ASSERT.SIMPLE_SQL_NAME(l_pk_col) || ' = :1';
+
+      BEGIN
+        EXECUTE IMMEDIATE l_sql INTO l_photo, l_mimetype USING p_pk_value;
+      EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+          l_photo := one_px_png;
+          l_mimetype := 'image/png';
+      END;
+
+      IF l_photo IS NULL THEN
+        l_photo := one_px_png;
+        l_mimetype := 'image/png';
+      END IF;
+
+      emit_blob(l_photo, NVL(l_mimetype, 'image/jpeg'));
+    END stream_blob;
+
+    PROCEDURE emp_photo IS
+    BEGIN
+      emp_photo(apex_application.g_x01);
+    END emp_photo;
+
+    PROCEDURE emp_photo(p_employee_id IN sufioun_employees.employee_id%TYPE) IS
+    BEGIN
+      stream_blob(
+        p_table_name  => 'SUFIOUN_EMPLOYEES',
+        p_pk_value    => p_employee_id,
+        p_blob_column => 'PHOTO',
+        p_mime_column => 'IMAGE_MIME_TYPE',
+        p_pk_column   => 'EMPLOYEE_ID'
+      );
+    END emp_photo;
+
+    PROCEDURE brand_logo IS
+    BEGIN
+      brand_logo(apex_application.g_x01);
+    END brand_logo;
+
+    PROCEDURE brand_logo(p_brand_id IN sufioun_brand.brand_id%TYPE) IS
+    BEGIN
+      stream_blob(
+        p_table_name  => 'SUFIOUN_BRAND',
+        p_pk_value    => p_brand_id,
+        p_blob_column => 'IMAGE_BLOB',
+        p_mime_column => 'IMAGE_MIME_TYPE',
+        p_pk_column   => 'BRAND_ID'
+      );
+    END brand_logo;
+
+    PROCEDURE supplier_logo IS
+    BEGIN
+      supplier_logo(apex_application.g_x01);
+    END supplier_logo;
+
+    PROCEDURE supplier_logo(p_supplier_id IN sufioun_suppliers.supplier_id%TYPE) IS
+    BEGIN
+      stream_blob(
+        p_table_name  => 'SUFIOUN_SUPPLIERS',
+        p_pk_value    => p_supplier_id,
+        p_blob_column => 'IMAGE_BLOB',
+        p_mime_column => 'IMAGE_MIME_TYPE',
+        p_pk_column   => 'SUPPLIER_ID'
+      );
+    END supplier_logo;
+
+    PROCEDURE product_image IS
+    BEGIN
+      product_image(apex_application.g_x01);
+    END product_image;
+
+    PROCEDURE product_image(p_product_id IN sufioun_products.product_id%TYPE) IS
+    BEGIN
+      stream_blob(
+        p_table_name  => 'SUFIOUN_PRODUCTS',
+        p_pk_value    => p_product_id,
+        p_blob_column => 'IMAGE_BLOB',
+        p_mime_column => 'IMAGE_MIME_TYPE',
+        p_pk_column   => 'PRODUCT_ID'
+      );
+    END product_image;
+  END sufioun_media_api;
+  /
+
+--------------------------------------------------------------------------------
+-- 15. sufioun_SALES_MASTER
+-- Sales invoice/transaction header
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_sales_master (
+    invoice_id     VARCHAR2(50) PRIMARY KEY,
+    invoice_date   DATE DEFAULT SYSDATE,
+    invoice_no     VARCHAR2(50) UNIQUE,
+    discount       NUMBER(15,2) DEFAULT 0,
+    vat            NUMBER(5,2) DEFAULT 0,
+    adjust_ref     VARCHAR2(50),
+    total_amount   NUMBER(20,4) DEFAULT 0,
+    adjust_amount  NUMBER(20,4) DEFAULT 0,
+    grand_total    NUMBER(20,4) DEFAULT 0,
+    customer_id    VARCHAR2(50),
+    sales_by       VARCHAR2(50),
+    payment_status VARCHAR2(20) DEFAULT 'PENDING',
+    notes          VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    status         NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1, 2)),
+    cre_by         VARCHAR2(100),
+    cre_dt         DATE,
+    upd_by         VARCHAR2(100),
+    upd_dt         DATE,
+    CONSTRAINT sufioun_fk_sales_cust FOREIGN KEY (customer_id) REFERENCES sufioun_customers(customer_id),
+    CONSTRAINT sufioun_fk_sales_emp  FOREIGN KEY (sales_by) REFERENCES sufioun_employees(employee_id),
+    CONSTRAINT sufioun_chk_pay_status CHECK (payment_status IN ('PENDING', 'PAID', 'PARTIAL', 'CANCELLED'))
+);
+/
+
+CREATE SEQUENCE sufioun_sales_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_sales_master_bi
+BEFORE INSERT OR UPDATE ON sufioun_sales_master
+FOR EACH ROW
+BEGIN
+    IF INSERTING AND :NEW.invoice_id IS NULL THEN
+        :NEW.invoice_id := 'INV' || TO_CHAR(sufioun_sales_seq.NEXTVAL);
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER;
+        :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 16. sufioun_SALES_RETURN_MASTER
+-- Sales return header
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_sales_return_master (
+    sales_return_id VARCHAR2(50) PRIMARY KEY,
+    invoice_id      VARCHAR2(50), 
+    customer_id     VARCHAR2(50),
+    return_date     DATE DEFAULT SYSDATE,
+    return_no       VARCHAR2(50) UNIQUE,
+    total_amount    NUMBER(20,4) DEFAULT 0,
+    reason          VARCHAR2(1000),
+    approved_by     VARCHAR2(50),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+    cre_by          VARCHAR2(100),
+    cre_dt          DATE,
+    upd_by          VARCHAR2(100),
+    upd_dt          DATE,
+    CONSTRAINT sufioun_fk_srm_inv   FOREIGN KEY (invoice_id) REFERENCES sufioun_sales_master(invoice_id),
+    CONSTRAINT sufioun_fk_srm_cust  FOREIGN KEY (customer_id) REFERENCES sufioun_customers(customer_id)
+);
+/
+
+CREATE SEQUENCE sufioun_sales_ret_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_sales_ret_bi
+BEFORE INSERT OR UPDATE ON sufioun_sales_return_master FOR EACH ROW
+BEGIN
+    IF INSERTING AND :NEW.sales_return_id IS NULL THEN
+        :NEW.sales_return_id := 'SRT' || TO_CHAR(sufioun_sales_ret_seq.NEXTVAL);
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER;
+        :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+ALTER TABLE sufioun_sales_master ADD CONSTRAINT sufioun_fk_sales_adjust 
+FOREIGN KEY (adjust_ref) REFERENCES sufioun_sales_return_master(sales_return_id);
+
+--------------------------------------------------------------------------------
+-- 17. sufioun_SERVICE_MASTER
+-- Service request header with before/after images
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_service_master (
+    service_id          VARCHAR2(50) PRIMARY KEY,
+    service_no          VARCHAR2(50) UNIQUE,
+    service_date        DATE DEFAULT SYSDATE,
+    customer_id         VARCHAR2(50),
+    invoice_id          VARCHAR2(50),
+    invoice_date        DATE, 
+    warranty_applicable CHAR(1) CHECK (warranty_applicable IN ('Y', 'N')),
+    service_by          VARCHAR2(50),
+    service_charge_total NUMBER(15,2) DEFAULT 0,
+    total_price         NUMBER(20,4) DEFAULT 0,
+    vat                 NUMBER(5,2) DEFAULT 0,
+    grand_total         NUMBER(20,4) DEFAULT 0,
+    service_status      VARCHAR2(20) DEFAULT 'RECEIVED',
+    image_before_blob   BLOB,
+    image_after_blob    BLOB,
+    status              NUMBER,
+    cre_by              VARCHAR2(100),
+    cre_dt              DATE,
+    upd_by              VARCHAR2(100),
+    upd_dt              DATE,
+    CONSTRAINT sufioun_fk_sm_cust FOREIGN KEY (customer_id) REFERENCES sufioun_customers(customer_id),
+    CONSTRAINT sufioun_fk_sm_emp  FOREIGN KEY (service_by) REFERENCES sufioun_employees(employee_id),
+    CONSTRAINT sufioun_fk_sm_inv  FOREIGN KEY (invoice_id) REFERENCES sufioun_sales_master(invoice_id),
+    CONSTRAINT sufioun_chk_svc_status CHECK (service_status IN ('RECEIVED', 'DIAGNOSIS', 'IN_PROGRESS', 'COMPLETED', 'DELIVERED', 'CANCELLED'))
+)
+LOB (image_before_blob) STORE AS (
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+)
+LOB (image_after_blob) STORE AS (
+    ENABLE STORAGE IN ROW
+    CHUNK 8192
+    PCTVERSION 10
+    CACHE
+    COMPRESS HIGH
+);
+/
+
+CREATE SEQUENCE sufioun_service_master_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+--------------------------------------------------------------------------------
+-- 18. sufioun_Purchase_order_MASTER 
+-- Purchase order header
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_Purchase_order_master (
+    order_id      VARCHAR2(50) PRIMARY KEY,
+    order_no      VARCHAR2(50) UNIQUE,
+    order_date    DATE DEFAULT SYSDATE,
+    supplier_id   VARCHAR2(50),
+    expected_delivery_date DATE,
+    order_by      VARCHAR2(50), 
+    total_amount  NUMBER(20,4) DEFAULT 0,
+    vat           NUMBER(5,2) DEFAULT 0,
+    grand_total   NUMBER(20,4) DEFAULT 0,
+    order_status  VARCHAR2(30) DEFAULT 'PENDING',
+    notes         VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    status        NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+    cre_by        VARCHAR2(100),
+    cre_dt        DATE,
+    upd_by        VARCHAR2(100),
+    upd_dt        DATE,
+    CONSTRAINT sufioun_fk_pom_sup  FOREIGN KEY (supplier_id) REFERENCES sufioun_suppliers(supplier_id),
+    CONSTRAINT sufioun_fk_pom_emp  FOREIGN KEY (order_by) REFERENCES sufioun_employees(employee_id),
+    CONSTRAINT sufioun_chk_order_status CHECK (order_status IN ('PENDING', 'APPROVED', 'PROCESSING', 'RECEIVED', 'CANCELLED'))
+);
+/
+
+CREATE SEQUENCE sufioun_order_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_prod_order_bi
+BEFORE INSERT OR UPDATE ON sufioun_Purchase_order_master FOR EACH ROW
+BEGIN
+    IF INSERTING AND :NEW.order_id IS NULL THEN
+        :NEW.order_id := 'ORD' || TO_CHAR(sufioun_order_seq.NEXTVAL);
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER;
+        :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 19. Sufioun_Purchase_receive_master 
+-- Goods received note header
+--------------------------------------------------------------------------------
+CREATE TABLE Sufioun_Purchase_receive_master (
+    receive_id      VARCHAR2(50) PRIMARY KEY,
+    receive_no      VARCHAR2(50) UNIQUE,
+    receive_date    DATE DEFAULT SYSDATE,
+    order_id        VARCHAR2(50),
+    sup_invoice_id  VARCHAR2(50) UNIQUE,
+    supplier_id     VARCHAR2(50), 
+    received_by     VARCHAR2(50), 
+    total_amount    NUMBER(20,4) DEFAULT 0,
+    vat             NUMBER(5,2) DEFAULT 0, 
+    grand_total     NUMBER(20,4) DEFAULT 0,   
+    receive_status  VARCHAR2(30) DEFAULT 'RECEIVED',
+    notes           VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+    cre_by          VARCHAR2(100),
+    cre_dt          DATE,
+    upd_by          VARCHAR2(100),
+    upd_dt          DATE,
+    CONSTRAINT sufioun_fk_pr_emp    FOREIGN KEY (received_by) REFERENCES sufioun_employees(employee_id),
+    CONSTRAINT sufioun_fk_pr_sup    FOREIGN KEY (supplier_id) REFERENCES sufioun_suppliers(supplier_id),
+    CONSTRAINT sufioun_fk_pr_order  FOREIGN KEY (order_id) REFERENCES sufioun_Purchase_order_master(order_id)
+);
+/
+
+CREATE SEQUENCE sufioun_receive_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_prod_recv_bi
+BEFORE INSERT OR UPDATE ON Sufioun_Purchase_receive_master FOR EACH ROW
+DECLARE
+    v_seq NUMBER;
+    v_latest_order VARCHAR2(50);
+BEGIN
+    IF INSERTING AND :NEW.receive_id IS NULL THEN
+        v_seq := sufioun_receive_seq.NEXTVAL;
+        :NEW.receive_id := 'RCV' || TO_CHAR(v_seq);
+        IF :NEW.sup_invoice_id IS NULL THEN
+            :NEW.sup_invoice_id := 'SINV' || TO_CHAR(v_seq);
+        END IF;
+    END IF;
+    
+    IF :NEW.order_id IS NULL AND :NEW.supplier_id IS NOT NULL THEN
+        BEGIN
+            SELECT order_id INTO v_latest_order
+            FROM (
+                SELECT order_id 
+                FROM sufioun_Purchase_order_master
+                WHERE supplier_id = :NEW.supplier_id
+                ORDER BY order_date DESC, order_id DESC
+            )
+            WHERE ROWNUM = 1;
+            :NEW.order_id := v_latest_order;
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN NULL;
+        END;
+    END IF;
+    
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER;
+        :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 20. Sufioun_Purchase_Return_Master 
+-- Supplier return header
+--------------------------------------------------------------------------------
+CREATE TABLE Sufioun_Purchase_Return_Master (
+    return_id       VARCHAR2(50) PRIMARY KEY,
+    return_no       VARCHAR2(50) UNIQUE,
+    supplier_id     VARCHAR2(50),
+    receive_id      VARCHAR2(50),
+    order_id        VARCHAR2(50),
+    return_date     DATE DEFAULT SYSDATE,
+    return_by       VARCHAR2(50), 
+    total_amount    NUMBER(20,4) DEFAULT 0,
+    adjusted_vat    NUMBER(5,2) DEFAULT 0, 
+    grand_total     NUMBER(20,4) DEFAULT 0,
+    return_reason   VARCHAR2(1000),
+    approved_by     VARCHAR2(50),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+    cre_by          VARCHAR2(100),
+    cre_dt          DATE,
+    upd_by          VARCHAR2(100),
+    upd_dt          DATE,
+    CONSTRAINT sufioun_fk_pre_sup FOREIGN KEY (supplier_id) REFERENCES sufioun_suppliers(supplier_id),
+    CONSTRAINT sufioun_fk_pre_rcv FOREIGN KEY (receive_id) REFERENCES Sufioun_Purchase_receive_master(receive_id),
+    CONSTRAINT sufioun_fk_pre_order FOREIGN KEY (order_id) REFERENCES sufioun_Purchase_order_master(order_id),
+    CONSTRAINT sufioun_fk_pre_emp FOREIGN KEY (return_by) REFERENCES sufioun_employees(employee_id)
+);
+/
+
+CREATE SEQUENCE sufioun_prod_ret_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_prod_ret_bi
+BEFORE INSERT OR UPDATE ON Sufioun_Purchase_Return_Master FOR EACH ROW
+BEGIN
+    IF INSERTING AND :NEW.return_id IS NULL THEN
+        :NEW.return_id := 'PRT' || TO_CHAR(sufioun_prod_ret_seq.NEXTVAL);
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER;
+        :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 21. sufioun_DAMAGE
+-- Damage/loss records
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_damage (
+    damage_id VARCHAR2(50) PRIMARY KEY,
+    damage_no VARCHAR2(50) UNIQUE,
+    damage_date DATE DEFAULT SYSDATE,
+    reference_no VARCHAR2(100),
+    total_loss NUMBER(15,2) DEFAULT 0,
+    damage_reason VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    status NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)), 
+    approved_by VARCHAR2(50),
+    approval_date DATE,
+    cre_by VARCHAR2(100),
+    cre_dt DATE,
+    upd_by VARCHAR2(100),
+    upd_dt DATE, 
+    CONSTRAINT sufioun_fk_dmg_emp FOREIGN KEY (approved_by) REFERENCES sufioun_employees(employee_id)
+);
+/
+
+CREATE SEQUENCE sufioun_damage_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_damage_bi
+BEFORE INSERT OR UPDATE ON sufioun_damage FOR EACH ROW
+BEGIN
+    IF INSERTING AND :NEW.damage_id IS NULL THEN
+        :NEW.damage_id := 'DMG' || TO_CHAR(sufioun_damage_seq.NEXTVAL);
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER;
+        :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 22. sufioun_STOCK
+-- Inventory stock tracking
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_stock (
+    stock_id        VARCHAR2(50) PRIMARY KEY,
+    product_id      VARCHAR2(50),
+    supplier_id     VARCHAR2(50),
+    product_cat_id  VARCHAR2(50),
+    sub_cat_id      VARCHAR2(50),
+    quantity        NUMBER(10) DEFAULT 0,
+    last_update     TIMESTAMP DEFAULT SYSTIMESTAMP,
+    location        VARCHAR2(100),
+    rack_no         VARCHAR2(50),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    CONSTRAINT sufioun_fk_s_p       FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id),
+    CONSTRAINT sufioun_fk_s_sup     FOREIGN KEY (supplier_id) REFERENCES sufioun_suppliers(supplier_id),
+    CONSTRAINT sufioun_fk_prod_cat   FOREIGN KEY (product_cat_id) REFERENCES sufioun_product_categories(product_cat_id),
+    CONSTRAINT sufioun_chk_stock_qty CHECK (quantity >= 0),
+    CONSTRAINT sufioun_uk_stock_prod UNIQUE (product_id)
+);
+/
+
+CREATE SEQUENCE sufioun_stock_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_stock_bi
+BEFORE INSERT OR UPDATE ON sufioun_stock FOR EACH ROW
+BEGIN
+    IF INSERTING AND :NEW.stock_id IS NULL THEN
+        :NEW.stock_id := 'STK' || TO_CHAR(sufioun_stock_seq.NEXTVAL);
+    END IF;
+    IF UPDATING THEN
+        :NEW.last_update := SYSTIMESTAMP;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 23. sufioun_SERVICE_DETAILS
+-- Service line items
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_service_details (
+    service_det_id     VARCHAR2(50) PRIMARY KEY,
+    service_id         VARCHAR2(50),
+    product_id         VARCHAR2(50),
+    servicelist_id     VARCHAR2(50),
+    parts_id           VARCHAR2(50),
+    service_charge     NUMBER(15,2) DEFAULT 0,
+    parts_price        NUMBER(15,2) DEFAULT 0,
+    quantity           NUMBER(10) DEFAULT 1, 
+    line_total         NUMBER(20,4) DEFAULT 0,
+    description        VARCHAR2(1000), 
+    warranty_status    VARCHAR2(50) CHECK (warranty_status IN ('Y', 'N')),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    CONSTRAINT sufioun_fk_sd_master FOREIGN KEY (service_id) REFERENCES sufioun_service_master(service_id),
+    CONSTRAINT sufioun_fk_sd_list   FOREIGN KEY (servicelist_id) REFERENCES sufioun_service_list(servicelist_id),
+    CONSTRAINT sufioun_fk_sd_parts  FOREIGN KEY (parts_id) REFERENCES sufioun_parts(parts_id),
+    CONSTRAINT sufioun_fk_sd_prod   FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
+);
+/
+
+CREATE SEQUENCE sufioun_service_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_service_det_bi 
+BEFORE INSERT ON sufioun_service_details FOR EACH ROW 
+BEGIN 
+    IF INSERTING AND :NEW.service_det_id IS NULL THEN
+        :NEW.service_det_id := 'SDT' || TO_CHAR(sufioun_service_det_seq.NEXTVAL);  
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_trg_sd_master_audit
+AFTER INSERT OR UPDATE OR DELETE ON sufioun_service_details
+FOR EACH ROW
+DECLARE
+    v_service_id sufioun_service_details.service_id%TYPE;
+BEGIN
+    IF INSERTING OR UPDATING THEN
+        v_service_id := :NEW.service_id;
+    ELSE
+        v_service_id := :OLD.service_id;
+    END IF;
+    UPDATE sufioun_service_master
+    SET upd_by = USER,
+        upd_dt = SYSDATE
+    WHERE service_id = v_service_id;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 24. sufioun_sales_details
+-- Sales invoice line items
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_sales_details (
+    sales_det_id    VARCHAR2(50) PRIMARY KEY,
+    invoice_id      VARCHAR2(50),
+    product_id      VARCHAR2(50),
+    mrp             NUMBER(15,2),
+    purchase_price  NUMBER(15,2),
+    discount_amount NUMBER(15,2) DEFAULT 0,
+    quantity        NUMBER(10),
+    line_total      NUMBER(20,4) GENERATED ALWAYS AS ((mrp - discount_amount) * quantity) VIRTUAL,
+    description     VARCHAR2(1000), 
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    CONSTRAINT sufioun_fk_sdt_inv  FOREIGN KEY (invoice_id) REFERENCES sufioun_sales_master(invoice_id) ON DELETE CASCADE,
+    CONSTRAINT sufioun_fk_sdt_prod FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
+);
+/
+
+CREATE SEQUENCE sufioun_sales_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_sales_det_bi 
+BEFORE INSERT ON sufioun_sales_details FOR EACH ROW 
+BEGIN 
+    IF INSERTING AND :NEW.sales_det_id IS NULL THEN
+        :NEW.sales_det_id := 'SLD' || TO_CHAR(sufioun_sales_det_seq.NEXTVAL); 
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_trg_sales_detail_sync
+FOR INSERT OR UPDATE OR DELETE ON sufioun_sales_details
+COMPOUND TRIGGER
+  TYPE t_inv_list IS TABLE OF BOOLEAN INDEX BY sufioun_sales_details.invoice_id%TYPE;
+  v_inv_ids t_inv_list;
+  v_idx sufioun_sales_details.invoice_id%TYPE;
+  AFTER EACH ROW IS
+  BEGIN
+    IF INSERTING OR UPDATING THEN
+       v_inv_ids(:NEW.invoice_id) := TRUE;
+    ELSIF DELETING THEN
+       v_inv_ids(:OLD.invoice_id) := TRUE;
+    END IF;
+  END AFTER EACH ROW;
+  AFTER STATEMENT IS
+    v_total        NUMBER;
+    v_grand_total  NUMBER;
+    v_discount     NUMBER;
+    v_vat_pct      NUMBER;
+    v_adj_amount   NUMBER;
+  BEGIN
+    v_idx := v_inv_ids.FIRST;
+    WHILE v_idx IS NOT NULL LOOP
+      SELECT NVL(SUM(mrp * quantity), 0)
+      INTO v_total
+      FROM sufioun_sales_details
+      WHERE invoice_id = v_idx;
+
+      SELECT NVL(discount, 0), NVL(vat, 0), NVL(adjust_amount, 0)
+      INTO v_discount, v_vat_pct, v_adj_amount
+      FROM sufioun_sales_master
+      WHERE invoice_id = v_idx;
+
+      v_grand_total := (v_total - v_discount - v_adj_amount) * (1 + v_vat_pct/100);
+
+      UPDATE sufioun_sales_master
+      SET total_amount = v_total,
+          grand_total  = ROUND(v_grand_total, 2),
+          upd_by       = USER,
+          upd_dt       = SYSDATE
+      WHERE invoice_id = v_idx;
+
+      v_idx := v_inv_ids.NEXT(v_idx);
+    END LOOP;
+  END AFTER STATEMENT;
+END sufioun_trg_sales_detail_sync;
+/
+
+--------------------------------------------------------------------------------
+-- 25. sufioun_SALES_RETURN_DETAILS
+-- Sales return line items
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_sales_return_details (
+    sales_return_det_id VARCHAR2(50) PRIMARY KEY,
+    sales_return_id     VARCHAR2(50),
+    product_id          VARCHAR2(50),
+    mrp                 NUMBER(15,2),
+    purchase_price      NUMBER(15,2),
+    quantity            NUMBER(10),
+    discount_amount     NUMBER(15,2) DEFAULT 0,
+    item_total          NUMBER(20,4),
+    qty_return          NUMBER(10),
+    reason              VARCHAR2(4000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    CONSTRAINT sufioun_fk_srd_mst FOREIGN KEY (sales_return_id) REFERENCES sufioun_sales_return_master(sales_return_id),
+    CONSTRAINT sufioun_fk_srd_prd FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
+);
+/
+
+CREATE SEQUENCE sufioun_sales_ret_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_sales_ret_det_bi 
+BEFORE INSERT ON sufioun_sales_return_details FOR EACH ROW 
+BEGIN 
+    IF INSERTING AND :NEW.sales_return_det_id IS NULL THEN
+        :NEW.sales_return_det_id := 'SRD' || TO_CHAR(sufioun_sales_ret_det_seq.NEXTVAL); 
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_trg_srd_master_audit
+AFTER INSERT OR UPDATE OR DELETE ON sufioun_sales_return_details
+FOR EACH ROW
+DECLARE
+    v_sales_return_id sufioun_sales_return_details.sales_return_id%TYPE;
+BEGIN
+    IF INSERTING OR UPDATING THEN
+        v_sales_return_id := :NEW.sales_return_id;
+    ELSE
+        v_sales_return_id := :OLD.sales_return_id;
+    END IF;
+    UPDATE sufioun_sales_return_master
+    SET upd_by = USER,
+        upd_dt = SYSDATE
+    WHERE sales_return_id = v_sales_return_id;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 26. sufioun_Purchase_order_details
+-- Purchase order line items
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_Purchase_order_details (
+    order_detail_id VARCHAR2(50) PRIMARY KEY,
+    order_id        VARCHAR2(50),
+    product_id      VARCHAR2(50),
+    mrp             NUMBER(15,2), 
+    purchase_price  NUMBER(15,2), 
+    quantity        NUMBER(10),
+    line_total      NUMBER(20,4) GENERATED ALWAYS AS (purchase_price * quantity) VIRTUAL,
+    delivered_qty   NUMBER(10) DEFAULT 0,
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    CONSTRAINT sufioun_fk_pod_mst FOREIGN KEY (order_id) REFERENCES sufioun_Purchase_order_master(order_id),
+    CONSTRAINT sufioun_fk_pod_prd FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
+);
+/
+
+CREATE SEQUENCE sufioun_order_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_order_det_bi 
+BEFORE INSERT ON sufioun_Purchase_order_details FOR EACH ROW 
+BEGIN 
+    IF INSERTING AND :NEW.order_detail_id IS NULL THEN
+        :NEW.order_detail_id := 'ODT' || TO_CHAR(sufioun_order_det_seq.NEXTVAL); 
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_trg_order_det_master_audit
+AFTER INSERT OR UPDATE OR DELETE ON sufioun_Purchase_order_details
+FOR EACH ROW
+DECLARE
+    v_order_id sufioun_Purchase_order_details.order_id%TYPE;
+BEGIN
+    IF INSERTING OR UPDATING THEN
+        v_order_id := :NEW.order_id;
+    ELSE
+        v_order_id := :OLD.order_id;
+    END IF;
+    UPDATE sufioun_Purchase_order_master
+    SET upd_by = USER,
+        upd_dt = SYSDATE
+    WHERE order_id = v_order_id;
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_tri_total_price_compound
+FOR INSERT OR UPDATE OR DELETE ON sufioun_Purchase_order_details
+COMPOUND TRIGGER
+  TYPE t_order_id_list IS TABLE OF sufioun_Purchase_order_details.order_id%TYPE INDEX BY PLS_INTEGER;
+  v_order_ids t_order_id_list;
+  AFTER EACH ROW IS
+  BEGIN
+    IF INSERTING OR UPDATING THEN
+       v_order_ids(v_order_ids.COUNT + 1) := :NEW.order_id;
+    ELSIF DELETING THEN
+       v_order_ids(v_order_ids.COUNT + 1) := :OLD.order_id;
+    END IF;
+  END AFTER EACH ROW;
+  AFTER STATEMENT IS
+    v_total NUMBER;
+    v_grand_total NUMBER;
+  BEGIN
+    FOR i IN 1 .. v_order_ids.COUNT LOOP
+      SELECT NVL(SUM(purchase_price * quantity), 0)
+      INTO v_total
+      FROM sufioun_Purchase_order_details
+      WHERE order_id = v_order_ids(i);
+      
+      v_grand_total := v_total + (v_total * 0.10);
+
+      UPDATE sufioun_Purchase_order_master
+      SET total_amount = v_total,
+          grand_total = v_grand_total
+      WHERE order_id = v_order_ids(i);
+    END LOOP;
+  END AFTER STATEMENT;
+END sufioun_tri_total_price_compound;
+/
+
+--------------------------------------------------------------------------------
+-- 27. Sufioun_Purchase_receive_DetailsS
+-- Goods received line items
+--------------------------------------------------------------------------------
+CREATE TABLE Sufioun_Purchase_receive_Details (
+    receive_det_id   VARCHAR2(50) PRIMARY KEY,
+    receive_id       VARCHAR2(50),
+    product_id       VARCHAR2(50),
+    mrp              NUMBER(15,2),              
+    purchase_price   NUMBER(15,2),              
+    receive_quantity NUMBER(10),
+    line_total       NUMBER(20,4) GENERATED ALWAYS AS (purchase_price * receive_quantity) VIRTUAL,
+    order_detail_id  VARCHAR2(50),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    CONSTRAINT sufioun_fk_prd_mst FOREIGN KEY (receive_id) REFERENCES Sufioun_Purchase_receive_master(receive_id),
+    CONSTRAINT sufioun_fk_prd_prd FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
+);
+/
+
+CREATE SEQUENCE sufioun_recv_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_recv_det_bi 
+BEFORE INSERT ON Sufioun_Purchase_receive_Detailss FOR EACH ROW 
+BEGIN 
+    IF INSERTING AND :NEW.receive_det_id IS NULL THEN
+        :NEW.receive_det_id := 'RDT' || TO_CHAR(sufioun_recv_det_seq.NEXTVAL); 
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_tri_receive_total_amount
+AFTER INSERT OR UPDATE OR DELETE ON Sufioun_Purchase_receive_Detailss
+DECLARE
+BEGIN
+    FOR r IN (
+        SELECT DISTINCT receive_id FROM Sufioun_Purchase_receive_Detailss
+    ) LOOP
+        UPDATE Sufioun_Purchase_receive_master m
+        SET m.total_amount = (
+                SELECT NVL(SUM(d.purchase_price * d.receive_quantity), 0)
+                FROM Sufioun_Purchase_receive_Detailss d
+                WHERE d.receive_id = r.receive_id
+            ),
+            m.grand_total = (
+                SELECT NVL(SUM(d.purchase_price * d.receive_quantity), 0)
+                FROM Sufioun_Purchase_receive_Detailss d
+                WHERE d.receive_id = r.receive_id
+            )
+            + NVL((
+                SELECT NVL(SUM(d.purchase_price * d.receive_quantity), 0)
+                       * NVL(m.vat, 0) / 100
+                FROM Sufioun_Purchase_receive_Detailss d
+                WHERE d.receive_id = r.receive_id
+            ), 0)
+        WHERE m.receive_id = r.receive_id;
+    END LOOP;
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_trg_recv_det_master_audit
+AFTER INSERT OR UPDATE OR DELETE ON Sufioun_Purchase_receive_Detailss
+FOR EACH ROW
+DECLARE
+    v_receive_id Sufioun_Purchase_receive_Detailss.receive_id%TYPE;
+BEGIN
+    IF INSERTING OR UPDATING THEN
+        v_receive_id := :NEW.receive_id;
+    ELSE
+        v_receive_id := :OLD.receive_id;
+    END IF;
+    UPDATE Sufioun_Purchase_receive_master
+    SET upd_by = USER,
+        upd_dt = SYSDATE
+    WHERE receive_id = v_receive_id;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 28. Sufioun_Purchase_Return_Details
+-- Supplier return line items
+--------------------------------------------------------------------------------
+CREATE TABLE Sufioun_Purchase_Return_Details (
+    return_detail_id VARCHAR2(50) PRIMARY KEY,
+    return_id        VARCHAR2(50),
+    product_id       VARCHAR2(50),
+    mrp              NUMBER(15,2),              
+    purchase_price   NUMBER(15,2),              
+    return_quantity  NUMBER(10), 
+    line_total       NUMBER(20,4) GENERATED ALWAYS AS (purchase_price * return_quantity) VIRTUAL,
+    reason           VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    CONSTRAINT sufioun_fk_prdet_mst FOREIGN KEY (return_id) REFERENCES Sufioun_Purchase_Return_Master(return_id),
+    CONSTRAINT sufioun_fk_prdet_prd FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
+);
+/
+
+CREATE SEQUENCE sufioun_prod_ret_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_prod_ret_det_bi BEFORE INSERT ON Sufioun_Purchase_Return_Detailss FOR EACH ROW 
+BEGIN 
+    IF INSERTING AND :NEW.return_detail_id IS NULL THEN
+        :NEW.return_detail_id := 'PRD' || TO_CHAR(sufioun_prod_ret_det_seq.NEXTVAL); 
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_tri_ret_total_price
+AFTER INSERT OR UPDATE OR DELETE ON Sufioun_Purchase_Return_Detailss
+DECLARE
+BEGIN
+    FOR r IN (SELECT DISTINCT return_id FROM Sufioun_Purchase_Return_Detailss) LOOP
+        UPDATE Sufioun_Purchase_Return_Master m
+        SET m.total_amount = (
+                SELECT NVL(SUM(d.purchase_price * d.return_quantity), 0)
+                FROM Sufioun_Purchase_Return_Detailss d
+                WHERE d.return_id = r.return_id
+            ),
+            m.grand_total = (
+                SELECT NVL(SUM(d.purchase_price * d.return_quantity), 0)
+                FROM Sufioun_Purchase_Return_Detailss d
+                WHERE d.return_id = r.return_id
+            ) + NVL((
+                SELECT NVL(SUM(d.purchase_price * d.return_quantity), 0) * NVL(m.adjusted_vat,0) / 100
+                FROM Sufioun_Purchase_Return_Detailss d
+                WHERE d.return_id = r.return_id
+            ),0)
+        WHERE m.return_id = r.return_id;
+    END LOOP;
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_trg_prd_ret_master_audit
+AFTER INSERT OR UPDATE OR DELETE ON Sufioun_Purchase_Return_Detailss
+FOR EACH ROW
+DECLARE
+    v_return_id Sufioun_Purchase_Return_Detailss.return_id%TYPE;
+BEGIN
+    IF INSERTING OR UPDATING THEN v_return_id := :NEW.return_id;
+    ELSE v_return_id := :OLD.return_id; END IF;
+
+    UPDATE Sufioun_Purchase_Return_Master SET upd_by = USER, upd_dt = SYSDATE WHERE return_id = v_return_id;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 29. sufioun_EXPENSE_MASTER
+-- Expense transaction header
+--------------------------------------------------------------------------------
+-- 29. sufioun_EXPENSE_MASTER
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_expense_master (
+    expense_id      VARCHAR2(50) PRIMARY KEY,
+    expense_no      VARCHAR2(50) UNIQUE,
+    expense_date    DATE,
+    expense_type_id VARCHAR2(50),
+  department_id   VARCHAR2(50),
+    expense_by      VARCHAR2(100),
+    expense_total   NUMBER(15,2),
+    notes           VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    status          NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+    cre_by          VARCHAR2(100),
+    cre_dt          DATE,
+    upd_by          VARCHAR2(100),
+    upd_dt          DATE,
+    CONSTRAINT sufioun_fk_ex_mst FOREIGN KEY (expense_type_id) REFERENCES sufioun_expense_list(expense_type_id),
+    CONSTRAINT sufioun_fk_ex_dept FOREIGN KEY (department_id) REFERENCES sufioun_departments(department_id)
+);
+/
+
+CREATE SEQUENCE sufioun_exp_mst_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_exp_mst_bi BEFORE INSERT OR UPDATE ON sufioun_expense_master FOR EACH ROW
+BEGIN
+    IF INSERTING AND :NEW.expense_id IS NULL THEN
+        :NEW.expense_id := 'EXM' || TO_CHAR(sufioun_exp_mst_seq.NEXTVAL); 
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER; :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 30. sufioun_EXPENSE_DETAILS
+-- Expense line items
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_expense_details (
+    expense_det_id    VARCHAR2(50) PRIMARY KEY,
+    expense_id        VARCHAR2(50) NOT NULL,
+    description       VARCHAR2(1000),
+    amount            NUMBER(15,2) DEFAULT 0,
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    CONSTRAINT sufioun_fk_ex_det_mst FOREIGN KEY (expense_id) REFERENCES sufioun_expense_master(expense_id)
+);
+/
+
+CREATE SEQUENCE sufioun_exp_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_exp_det_bi BEFORE INSERT OR UPDATE ON sufioun_expense_details FOR EACH ROW
+BEGIN 
+    IF INSERTING AND :NEW.expense_det_id IS NULL THEN
+        :NEW.expense_det_id := 'EXD' || TO_CHAR(sufioun_exp_det_seq.NEXTVAL);
+    END IF; 
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_tri_expense_total
+AFTER INSERT OR UPDATE OR DELETE ON sufioun_expense_details
+BEGIN
+   FOR r IN (SELECT DISTINCT expense_id FROM sufioun_expense_details) LOOP
+      UPDATE sufioun_expense_master m
+      SET m.expense_total = (SELECT NVL(SUM(d.amount), 0) FROM sufioun_expense_details d WHERE d.expense_id = r.expense_id)
+      WHERE m.expense_id = r.expense_id;
+   END LOOP;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 31. sufioun_damage_details 
+-- Damage line items
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_damage_details (
+    damage_detail_id VARCHAR2(50) PRIMARY KEY,
+    damage_id        VARCHAR2(50),
+    product_id       VARCHAR2(50),
+    mrp              NUMBER(15,2),
+    purchase_price   NUMBER(15,2),
+    damage_quantity  NUMBER(10),
+    line_total       NUMBER(15,2) GENERATED ALWAYS AS (purchase_price * damage_quantity) VIRTUAL,
+    reason           VARCHAR2(1000),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    CONSTRAINT sufioun_fk_dmg_mst FOREIGN KEY (damage_id) REFERENCES sufioun_damage(damage_id),
+    CONSTRAINT sufioun_fk_dmg_prd FOREIGN KEY (product_id) REFERENCES sufioun_products(product_id)
+);
+/
+
+CREATE SEQUENCE sufioun_damage_det_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_damage_det_bi BEFORE INSERT ON sufioun_damage_details FOR EACH ROW 
+BEGIN 
+    IF INSERTING AND :NEW.damage_detail_id IS NULL THEN
+        :NEW.damage_detail_id := 'DDT' || TO_CHAR(sufioun_damage_det_seq.NEXTVAL);
+    END IF; 
+END;
+/
+
+CREATE OR REPLACE TRIGGER sufioun_trg_dmg_master_audit
+AFTER INSERT OR UPDATE OR DELETE ON sufioun_damage_details
+FOR EACH ROW
+DECLARE
+    v_damage_id sufioun_damage_details.damage_id%TYPE;
+BEGIN
+    IF INSERTING OR UPDATING THEN v_damage_id := :NEW.damage_id;
+    ELSE v_damage_id := :OLD.damage_id; END IF;
+
+    UPDATE sufioun_damage SET upd_by = USER, upd_dt = SYSDATE WHERE damage_id = v_damage_id;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 32. sufioun_COM_USERS
+-- Application user accounts
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_com_users (
+    user_id     VARCHAR2(50) PRIMARY KEY,
+    user_name   VARCHAR2(100) NOT NULL UNIQUE,
+    password    VARCHAR2(200) NOT NULL,
+    role        VARCHAR2(50) DEFAULT 'user' NOT NULL,
+    employee_id VARCHAR2(50),
+    last_login  DATE,
+    is_online   NUMBER(1) DEFAULT 0,
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    status      NUMBER(1) DEFAULT 1 CHECK (status IN (0, 1)),
+    cre_by      VARCHAR2(100),
+    cre_dt      DATE,
+    upd_by      VARCHAR2(100),
+    upd_dt      DATE,
+    CONSTRAINT sufioun_fk_users_emp FOREIGN KEY (employee_id) REFERENCES sufioun_employees(employee_id) ON DELETE SET NULL,
+    CONSTRAINT sufioun_chk_user_role CHECK (role IN ('admin', 'manager', 'user', 'technician', 'cashier'))
+);
+/
+
+CREATE SEQUENCE sufioun_users_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_users_bi
+BEFORE INSERT OR UPDATE ON sufioun_com_users FOR EACH ROW
+BEGIN
+    IF INSERTING AND :NEW.user_id IS NULL THEN
+        :NEW.user_id := UPPER(SUBSTR(TRIM(:NEW.user_name), 1, 3)) || TO_CHAR(sufioun_users_seq.NEXTVAL);
+    END IF;
+    IF INSERTING THEN
+        IF :NEW.status IS NULL THEN :NEW.status := 1; END IF;
+        IF :NEW.cre_by IS NULL THEN :NEW.cre_by := USER; END IF;
+        IF :NEW.cre_dt IS NULL THEN :NEW.cre_dt := SYSDATE; END IF;
+    ELSIF UPDATING THEN
+        :NEW.upd_by := USER; :NEW.upd_dt := SYSDATE;
+    END IF;
+END;
+/
+
+--------------------------------------------------------------------------------
+-- 33. sufioun_PAYMENTS
+-- Supplier payment records
+--------------------------------------------------------------------------------
+CREATE TABLE sufioun_payments (
+    payment_id   VARCHAR2(50) PRIMARY KEY,
+    payment_no   VARCHAR2(50) UNIQUE,
+    payment_date DATE NOT NULL,
+    amount       NUMBER NOT NULL CHECK (amount > 0),
+    supplier_id  VARCHAR2(50),
+    payment_type VARCHAR2(50),
+    reference_no VARCHAR2(100),
+    notes        VARCHAR2(500),
+    -- APEX Image Columns
+    image_name      VARCHAR2(500),
+    image_mime_type VARCHAR2(100),
+    image_blob      BLOB,
+    --
+    CONSTRAINT sufioun_fk_pay_sup FOREIGN KEY (supplier_id) REFERENCES sufioun_suppliers(supplier_id),
+    CONSTRAINT sufioun_chk_pay_type CHECK (UPPER(payment_type) IN ('CASH','ONLINE','BANK','CHEQUE'))
+);
+/
+
+CREATE SEQUENCE sufioun_payments_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+CREATE OR REPLACE TRIGGER sufioun_trg_payments_bi BEFORE INSERT OR UPDATE ON sufioun_payments FOR EACH ROW
+BEGIN
+    IF INSERTING AND :NEW.payment_id IS NULL THEN
+        :NEW.payment_id := 'PAY' || TO_CHAR(sufioun_payments_seq.NEXTVAL);
+    END IF;
+END;
+/
